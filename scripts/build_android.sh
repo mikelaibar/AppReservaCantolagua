@@ -12,7 +12,7 @@ mkdir -p "$BUILD/gen" "$BUILD/classes" "$BUILD/dex" "$TASK_ROOT/artifacts"
 rm -rf "$BUILD/classes" "$BUILD/dex" "$BUILD/gen"
 mkdir -p "$BUILD/gen" "$BUILD/classes" "$BUILD/dex"
 "$BT/aapt2" compile --dir "$SRC/res" -o "$BUILD/resources.zip"
-"$BT/aapt2" link -I "$SDK/platforms/android-35/android.jar" --manifest "$SRC/AndroidManifest.xml" --java "$BUILD/gen" -o "$BUILD/resources.apk" --min-sdk-version 26 --target-sdk-version 35 --version-code 1 --version-name 1.0.0 "$BUILD/resources.zip"
+"$BT/aapt2" link -I "$SDK/platforms/android-35/android.jar" --manifest "$SRC/AndroidManifest.xml" --java "$BUILD/gen" -o "$BUILD/resources.apk" --min-sdk-version 26 --target-sdk-version 35 --version-code 1 --version-name 1.0.0 -A "$SRC/assets" "$BUILD/resources.zip"
 find "$SRC/java" "$BUILD/gen" -name '*.java' > "$BUILD/sources.txt"
 java -m jdk.compiler/com.sun.tools.javac.Main -source 8 -target 8 -Xlint:-options -bootclasspath "$SDK/platforms/android-35/android.jar:$BT/core-lambda-stubs.jar" -classpath "$TASK_TOOLS/jsoup.jar" -d "$BUILD/classes" @"$BUILD/sources.txt"
 java -m jdk.jartool/sun.tools.jar.Main cf "$BUILD/classes.jar" -C "$BUILD/classes" .
