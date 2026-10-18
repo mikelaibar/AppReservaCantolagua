@@ -191,23 +191,33 @@ public final class Store extends SQLiteOpenHelper {
   }
 
   public void catalogue(List<ClubClient.Session> sessions) throws Exception {
-    JSONArray a = new JSONArray();
-    Set<String> seen = new HashSet<>();
-    for (ClubClient.Session s : sessions) {
-      String k = s.date.getDayOfWeek() + "|" + s.activity + "|" + s.time;
-      if (seen.add(k))
-        a.put(
-            new Plan.Slot(s.date.getDayOfWeek().getValue() - 1, s.activity, s.name, s.time).json());
+    synchronized (LOCK) {
+      List<Timetable.Entry> history = Timetable.merge(timetable(), sessions);
+      save(
+          prefs
+              .edit()
+              .putString("catalogue", Timetable.encode(history))
+              .putInt("catalogue_schema", 2)
+              .putLong("catalogue_time", System.currentTimeMillis()));
     }
-    save(
-        prefs
-            .edit()
-            .putString("catalogue", a.toString())
-            .putLong("catalogue_time", System.currentTimeMillis()));
+  }
+
+  public List<Timetable.Entry> timetable() {
+    try {
+      return Timetable.decode(prefs.getString("catalogue", "[]"));
+    } catch (JSONException e) {
+      throw new IllegalStateException("No se pudo leer el horario guardado", e);
+    }
+  }
+
+  public boolean currentCatalogue() {
+    return prefs.getInt("catalogue_schema", 0) >= 2;
   }
 
   public List<Plan.Slot> catalogue() {
-    return Plan.decode(prefs.getString("catalogue", "[]"));
+    List<Plan.Slot> slots = new ArrayList<>();
+    for (Timetable.Entry e : timetable()) slots.add(e.slot);
+    return slots;
   }
 
   public long catalogueTime() {

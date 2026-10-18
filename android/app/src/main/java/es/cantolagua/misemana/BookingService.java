@@ -71,6 +71,7 @@ public final class BookingService extends Service {
         List<ClubClient.Session> catalogue;
         try {
           catalogue = client.catalogue();
+          store.catalogue(catalogue);
         } catch (Exception e) {
           Thread.sleep(2000);
           continue;

@@ -26,6 +26,7 @@ public final class MainActivity extends Activity {
       LINE = 0xffdce5dc;
   private Store store;
   private LinearLayout root, content;
+  private AlertDialog picker;
   private final ExecutorService worker = Executors.newSingleThreadExecutor();
   private int tab = 0;
   private boolean recurring = true, busy = false;
@@ -303,6 +304,17 @@ public final class MainActivity extends Activity {
                       }),
               false));
     }
+    content.addView(
+        text(
+            store.catalogueTime() > 0
+                ? "Horario guardado por día y hora · última consulta "
+                    + Instant.ofEpochMilli(store.catalogueTime())
+                        .atZone(Plan.ZONE)
+                        .format(DateTimeFormatter.ofPattern("dd/MM HH:mm"))
+                : "Elige la hora. Las actividades se mostrarán al consultar el calendario.",
+            14,
+            MUTED,
+            false));
     List<Plan.Slot> slots = recurring ? store.template() : store.week(week);
     for (int d = 0; d < 7; d++) {
       final int day = d;
@@ -347,62 +359,138 @@ public final class MainActivity extends Activity {
   }
 
   private void chooseSlot(int day) {
-    List<Plan.Slot> choices = new ArrayList<>();
-    for (Plan.Slot s : store.catalogue()) if (s.day == day) choices.add(s);
-    choices.sort(Comparator.comparing(s -> s.time));
-    List<String> labels = new ArrayList<>();
-    for (Plan.Slot s : choices) labels.add(s.toString());
-    labels.add("Elegir otra hora…");
-    new AlertDialog.Builder(this)
-        .setTitle(Plan.DAYS[day] + ": elige una clase")
-        .setItems(
-            labels.toArray(new String[0]),
-            (d, n) -> {
-              if (n == choices.size()) customSlot(day);
-              else addSlot(choices.get(n));
-            })
-        .setNegativeButton("Cancelar", null)
-        .show();
+    if (store.hasCredentials()
+        && store.verified()
+        && (!store.currentCatalogue()
+            || System.currentTimeMillis() - store.catalogueTime() > 5 * 60 * 1000)) {
+      refreshTimetable(day);
+    } else showTimeChoices(day);
   }
 
-  private void customSlot(int day) {
+  private void refreshTimetable(int day) {
+    if (busy) return;
+    busy = true;
+    render();
+    worker.execute(
+        () -> {
+          boolean updated = false;
+          try {
+            ClubClient client = new ClubClient();
+            client.login(store.user(), store.password());
+            store.catalogue(client.catalogue());
+            updated = true;
+          } catch (Exception ignored) {
+          }
+          final boolean success = updated;
+          runOnUiThread(
+              () -> {
+                if (isFinishing() || isDestroyed()) return;
+                busy = false;
+                render();
+                if (success) showTimeChoices(day);
+                else
+                  new AlertDialog.Builder(this)
+                      .setTitle("No se pudo actualizar el horario")
+                      .setMessage(
+                          "Puedes ver las horas y actividades guardadas de consultas anteriores."
+                              + " Las horas sin actividad se mostrarán como pendientes; no se les"
+                              + " asignará otra clase.")
+                      .setPositiveButton(
+                          "Ver horario guardado", (dialog, which) -> showTimeChoices(day))
+                      .setNegativeButton("Cancelar", null)
+                      .show();
+              });
+        });
+  }
+
+  private void showTimeChoices(int day) {
+    List<Timetable.Entry> entries = store.timetable();
+    List<String> hours = Timetable.hours(entries, day);
+    List<String> labels = new ArrayList<>();
+    for (String hour : hours) labels.add(Timetable.label(entries, day, hour));
+    if (picker != null && picker.isShowing()) picker.dismiss();
+    picker =
+        new AlertDialog.Builder(this)
+            .setTitle(Plan.DAYS[day] + ": elige una hora")
+            .setItems(
+                labels.toArray(new String[0]),
+                (dialog, index) -> {
+                  String hour = hours.get(index);
+                  List<Plan.Slot> options = Timetable.choices(entries, day, hour);
+                  if (options.size() == 1) addSlot(options.get(0));
+                  else if (options.size() > 1) {
+                    String[] names = new String[options.size()];
+                    for (int n = 0; n < names.length; n++) names[n] = options.get(n).toString();
+                    picker =
+                        new AlertDialog.Builder(this)
+                            .setTitle(Plan.DAYS[day] + " " + hour)
+                            .setItems(names, (d, n) -> addSlot(options.get(n)))
+                            .setNegativeButton("Cancelar", null)
+                            .show();
+                  } else
+                    new AlertDialog.Builder(this)
+                        .setTitle(Plan.DAYS[day] + " " + hour)
+                        .setMessage(
+                            "Todavía no hay una actividad guardada para este día y hora. El nombre"
+                                + " se conservará cuando Cantolagua publique la sesión y se"
+                                + " consulte el calendario.")
+                        .setPositiveButton("Consultar calendario", (d, n) -> refreshTimetable(day))
+                        .setNeutralButton("Configurar manualmente", (d, n) -> customSlot(day, hour))
+                        .setNegativeButton("Cancelar", null)
+                        .show();
+                })
+            .setNeutralButton(
+                "Otra hora (manual)",
+                (dialog, which) ->
+                    new TimePickerDialog(
+                            this,
+                            (p, h, m) ->
+                                customSlot(day, String.format(Locale.ROOT, "%02d:%02d", h, m)),
+                            17,
+                            30,
+                            true)
+                        .show())
+            .setPositiveButton(
+                "Actualizar",
+                (dialog, which) -> {
+                  if (store.hasCredentials()) refreshTimetable(day);
+                  else {
+                    toast("Conecta tu cuenta en Ajustes");
+                    tab = 2;
+                    render();
+                  }
+                })
+            .setNegativeButton("Cancelar", null)
+            .show();
+  }
+
+  private void customSlot(int day, String time) {
     LinkedHashMap<String, Plan.Slot> types = new LinkedHashMap<>();
     for (Plan.Slot s : store.catalogue()) types.put(s.activity, s);
     if (types.isEmpty()) {
-      toast("Conecta tu cuenta en Ajustes para cargar las actividades");
+      toast("Conecta tu cuenta para consultar las actividades");
       tab = 2;
       render();
       return;
     }
     List<Plan.Slot> options = new ArrayList<>(types.values());
     String[] labels = new String[options.size()];
-    for (int i = 0; i < labels.length; i++) labels[i] = options.get(i).name;
+    for (int i = 0; i < labels.length; i++) labels[i] = time + " · " + options.get(i).name;
     new AlertDialog.Builder(this)
-        .setTitle("Actividad")
+        .setTitle(Plan.DAYS[day] + " " + time + " · sin verificar")
         .setItems(
             labels,
             (d, n) -> {
               Plan.Slot type = options.get(n);
-              new TimePickerDialog(
-                      this,
-                      (p, h, m) -> {
-                        Plan.Slot s =
-                            new Plan.Slot(
-                                day,
-                                type.activity,
-                                type.name,
-                                String.format(Locale.ROOT, "%02d:%02d", h, m));
-                        confirm(
-                            "Confirmar horario",
-                            s
-                                + ". Solo se reservará si Cantolagua publica exactamente esta"
-                                + " actividad, día y hora.",
-                            () -> addSlot(s));
-                      },
-                      17,
-                      30,
-                      true)
-                  .show();
+              Plan.Slot slot = new Plan.Slot(day, type.activity, type.name, time);
+              confirm(
+                  "Confirmar horario manual",
+                  Plan.DAYS[day]
+                      + " "
+                      + slot
+                      + ". Esta combinación no está confirmada por el calendario. Solo se reservará"
+                      + " si Cantolagua publica exactamente esa actividad, día y hora.",
+                  () -> addSlot(slot));
             })
         .setNegativeButton("Cancelar", null)
         .show();
@@ -697,7 +785,7 @@ public final class MainActivity extends Activity {
             MUTED,
             false));
     LinearLayout help = card();
-    help.addView(text("Mi Cantolagua · 1.0.0", 18, INK, true));
+    help.addView(text("Mi Cantolagua · 1.0.1", 18, INK, true));
     help.addView(
         text(
             "Aplicación independiente. No garantiza plaza si la clase se llena. La solicitud se"
