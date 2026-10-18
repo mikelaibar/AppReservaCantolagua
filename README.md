@@ -6,7 +6,7 @@ Aplicación nativa independiente para programar reservas en [Cantolagua](https:/
 
 1. Descarga `artifacts/MiCantolagua-1.0.0.apk` en el móvil y ábrelo. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
 2. En **Ajustes**, escribe el usuario y contraseña que usas en Cantolagua y pulsa **Guardar y comprobar acceso**. Se cargarán las actividades publicadas en el centro. No se realiza ninguna reserva al comprobar el acceso.
-3. Confirma la **antelación** y la **hora de apertura**. La propuesta inicial es **2 días antes a las 07:30**, hora de Madrid; la antelación real está pendiente de confirmar con el centro. Puedes elegir de 0 a 14 días. Cambiar esos valores vuelve a programar la próxima alarma.
+3. La regla confirmada ya está configurada: **4 días naturales antes, a la misma hora de la sesión**, hora de Madrid. Por ejemplo, lunes 17:30 → jueves anterior 17:30; martes 18:30 → viernes anterior 18:30. Cada actividad tiene su apertura propia. La antelación se puede cambiar en Ajustes si el centro modifica la regla.
 4. Permite **Alarmas y recordatorios** y **Notificaciones**. En los ajustes de batería del teléfono permite el funcionamiento sin restricciones para Mi Cantolagua. Si el fabricante tiene un ajuste de inicio automático, actívalo.
 5. En **Mi semana**, añade las actividades de cada día a **Todas las semanas**. Esta es tu plantilla habitual y se repite indefinidamente. **Solo una semana** permite quitar o añadir clases en una semana concreta sin cambiar las siguientes. **Volver al horario habitual** elimina esa excepción.
 6. Activa **Reservar por mí**. Comprueba la próxima apertura en la pantalla principal o en **Reservas**. Los intentos cuyo plazo ya ha pasado no se ejecutan tarde.

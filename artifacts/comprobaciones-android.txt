@@ -1,0 +1,23 @@
+Success
+PASS confirmed four-day rule is the installation default
+PASS Keystore encrypted credential round trip
+PASS new credentials pause automation
+PASS credentials survive store reopening
+PASS weekly template saved
+PASS one-week override preserves future template
+PASS reset week restores template
+PASS durable claim created before mutation
+PASS duplicate job claim blocked
+PASS duplicate canonical session claim blocked
+PASS interrupted mutation remains uncertain
+PASS confirmed outcome persisted
+PASS exact alarm permission granted for test
+PASS scheduler creates private immutable alarm intent
+PASS exact alarm starts foreground service while app UI is closed
+PASS release activity launches on Android 15
+PASS settings display confirmed booking rule
+PASS history tab opens without credentials
+PASS weekly plan tab opens
+RESULT: 19 device checks passed; no live requests sent.
+
+

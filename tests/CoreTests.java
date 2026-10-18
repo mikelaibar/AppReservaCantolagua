@@ -38,13 +38,11 @@ public final class CoreTests {
         item.date.equals(LocalDate.of(2026, 10, 20)) && item.open && item.person.equals("99"),
         "parse real calendar contract");
     Plan.Slot slot = new Plan.Slot(1, "8", "Global Training", "20:30");
-    Plan.Job job = new Plan.Job(slot, LocalDate.of(2026, 10, 20), 2, LocalTime.of(7, 30));
+    Plan.Job job = new Plan.Job(slot, LocalDate.of(2026, 10, 20), 4);
     check(ClubClient.match(sessions, job) == item, "exact date activity and time match");
     check(
         ClubClient.match(
-                sessions,
-                new Plan.Job(
-                    new Plan.Slot(1, "7", "Pilates", "20:30"), job.date, 2, LocalTime.of(7, 30)))
+                sessions, new Plan.Job(new Plan.Slot(1, "7", "Pilates", "20:30"), job.date, 4))
             == null,
         "never substitutes a different activity");
     List<ClubClient.Session> duplicate = new ArrayList<>(sessions);
@@ -121,40 +119,30 @@ public final class CoreTests {
     rejects(() -> ClubClient.sessionDate("lunes 1/1", today), "stale or mismatched date rejected");
     List<Plan.Slot> template = Collections.singletonList(slot);
     Map<String, List<Plan.Slot>> overrides = new HashMap<>();
-    Instant now = Instant.parse("2026-10-18T04:00:00Z");
-    List<Plan.Job> jobs = Plan.jobs(now, 2, LocalTime.of(7, 30), template, overrides);
+    Instant now = Instant.parse("2026-10-15T04:00:00Z");
+    List<Plan.Job> jobs = Plan.jobs(now, 4, template, overrides);
     check(
-        jobs.get(0).release.equals(Instant.parse("2026-10-18T05:30:00Z")), "Madrid summer offset");
+        jobs.get(0).release.equals(Instant.parse("2026-10-16T18:30:00Z")), "Madrid summer offset");
     check(
-        jobs.get(1).release.equals(Instant.parse("2026-10-25T06:30:00Z")),
+        jobs.get(2).release.equals(Instant.parse("2026-10-30T19:30:00Z")),
         "Madrid winter offset across DST");
     check(
         jobs.get(1).slot.key().equals(slot.key()), "weekly plan repeats without copying app state");
     overrides.put("2026-10-19", Collections.emptyList());
     check(
-        Plan.jobs(now, 2, LocalTime.of(7, 30), template, overrides)
-            .get(0)
-            .date
-            .equals(LocalDate.of(2026, 10, 27)),
+        Plan.jobs(now, 4, template, overrides).get(0).date.equals(LocalDate.of(2026, 10, 27)),
         "empty week override suppresses only that week");
     check(
         Plan.decode(Plan.encode(template)).get(0).key().equals(slot.key()),
         "plan persists losslessly");
     check(
-        Plan.jobs(
-                Instant.parse("2026-10-18T05:31:31Z"),
-                2,
-                LocalTime.of(7, 30),
-                template,
-                Collections.emptyMap())
+        Plan.jobs(Instant.parse("2026-10-16T18:31:31Z"), 4, template, Collections.emptyMap())
             .get(0)
             .date
             .equals(LocalDate.of(2026, 10, 27)),
         "missed opening not booked late");
     check(
-        Plan.jobs(now, 2, LocalTime.of(7, 30), Arrays.asList(slot, slot), Collections.emptyMap())
-                .size()
-            == jobs.size(),
+        Plan.jobs(now, 4, Arrays.asList(slot, slot), Collections.emptyMap()).size() == jobs.size(),
         "duplicate selected slots deduplicated");
     rejects(
         () -> ClubClient.signed(html.replace("class=\"identificado\"", "")),
@@ -199,11 +187,34 @@ public final class CoreTests {
     Map<String, List<Plan.Slot>> distant = new HashMap<>();
     distant.put("2027-01-04", template);
     check(
-        Plan.jobs(now, 2, LocalTime.of(7, 30), Collections.emptyList(), distant)
+        Plan.jobs(now, 4, Collections.emptyList(), distant)
             .get(0)
             .date
             .equals(LocalDate.of(2027, 1, 5)),
         "distant isolated week still schedules an alarm");
+    for (int day = 0; day < 5; day++) {
+      Plan.Job example =
+          new Plan.Job(
+              new Plan.Slot(day, "8", "Global Training", "17:30"),
+              LocalDate.of(2026, 10, 19).plusDays(day),
+              4);
+      check(
+          example
+                  .release
+                  .atZone(Plan.ZONE)
+                  .toLocalDate()
+                  .equals(LocalDate.of(2026, 10, 15).plusDays(day))
+              && example.release.atZone(Plan.ZONE).toLocalTime().equals(LocalTime.of(17, 30)),
+          "confirmed four-day same-hour rule for " + Plan.DAYS[day]);
+    }
+    Plan.Job early =
+        new Plan.Job(new Plan.Slot(0, "7", "Pilates", "17:30"), LocalDate.of(2026, 10, 19), 4);
+    Plan.Job late =
+        new Plan.Job(
+            new Plan.Slot(0, "8", "Global Training", "20:30"), LocalDate.of(2026, 10, 19), 4);
+    check(
+        !early.release.equals(late.release),
+        "different session hours have different release times");
     System.out.println("RESULT: " + count + " passed; 0 failed. No live bookings sent.");
   }
 }

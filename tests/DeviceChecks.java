@@ -17,6 +17,19 @@ public final class DeviceChecks extends Instrumentation {
     report.append("PASS ").append(label).append('\n');
   }
 
+  private android.view.View find(android.view.View view, String text) {
+    if (view instanceof android.widget.TextView
+        && text.contentEquals(((android.widget.TextView) view).getText())) return view;
+    if (view instanceof android.view.ViewGroup) {
+      android.view.ViewGroup group = (android.view.ViewGroup) view;
+      for (int i = 0; i < group.getChildCount(); i++) {
+        android.view.View found = find(group.getChildAt(i), text);
+        if (found != null) return found;
+      }
+    }
+    return null;
+  }
+
   public void onCreate(Bundle b) {
     super.onCreate(b);
     start();
@@ -27,6 +40,7 @@ public final class DeviceChecks extends Instrumentation {
     Store s = new Store(getTargetContext());
     try {
       s.erase();
+      check(s.lead() == 4, "confirmed four-day rule is the installation default");
       s.credentials("device-test", "synthetic-password");
       check("synthetic-password".equals(s.password()), "Keystore encrypted credential round trip");
       check(!s.enabled() && s.verified(), "new credentials pause automation");
@@ -43,11 +57,11 @@ public final class DeviceChecks extends Instrumentation {
           "one-week override preserves future template");
       s.resetWeek(week);
       check(s.week(week).size() == 1, "reset week restores template");
-      Plan.Job j = new Plan.Job(slot, week.plusDays(1), 2, LocalTime.of(7, 30));
+      Plan.Job j = new Plan.Job(slot, week.plusDays(1), 4);
       String account = s.account();
       check(s.claim(account, j, "947"), "durable claim created before mutation");
       check(!s.claim(account, j, "947"), "duplicate job claim blocked");
-      Plan.Job other = new Plan.Job(slot, j.date.plusWeeks(1), 2, LocalTime.of(7, 30));
+      Plan.Job other = new Plan.Job(slot, j.date.plusWeeks(1), 4);
       check(!s.claim(account, other, "947"), "duplicate canonical session claim blocked");
       check(
           s.attempted(j.key()) && s.history().get(0)[2].equals("Comprobar en la web"),
@@ -92,6 +106,20 @@ public final class DeviceChecks extends Instrumentation {
               .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
       Activity activity = startActivitySync(launch);
       check(activity != null, "release activity launches on Android 15");
+      final Activity screen = activity;
+      runOnMainSync(() -> find(screen.getWindow().getDecorView(), "Ajustes").performClick());
+      check(
+          find(screen.getWindow().getDecorView(), "Antelación: 4 días antes") != null,
+          "settings display confirmed booking rule");
+      runOnMainSync(() -> find(screen.getWindow().getDecorView(), "Reservas").performClick());
+      check(
+          find(screen.getWindow().getDecorView(), "Próximos intentos") != null,
+          "history tab opens without credentials");
+      runOnMainSync(() -> find(screen.getWindow().getDecorView(), "Mi semana").performClick());
+      check(
+          find(screen.getWindow().getDecorView(), "Todas las semanas") != null
+              || find(screen.getWindow().getDecorView(), "✓ Todas las semanas") != null,
+          "weekly plan tab opens");
       result.putString(
           "stream",
           report + "RESULT: " + count + " device checks passed; no live requests sent.\n");

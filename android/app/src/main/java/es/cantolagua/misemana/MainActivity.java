@@ -203,12 +203,6 @@ public final class MainActivity extends Activity {
               render();
               return;
             }
-            if (!store.timingConfirmed()) {
-              toast("Confirma en Ajustes los días y la hora de apertura");
-              tab = 2;
-              render();
-              return;
-            }
             if (!Scheduler.allowed(this)) {
               toast("Permite Alarmas y recordatorios y vuelve a activar las reservas");
               open(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, true);
@@ -346,9 +340,7 @@ public final class MainActivity extends Activity {
         text(
             "Apertura configurada: "
                 + store.lead()
-                + " días antes, a las "
-                + store.opening()
-                + " (Madrid). Confirma esta regla con el centro en Ajustes.",
+                + " días naturales antes, a la misma hora de cada clase (Madrid).",
             14,
             MUTED,
             false));
@@ -608,10 +600,8 @@ public final class MainActivity extends Activity {
     timing.addView(text("Cuándo se abre la reserva", 22, INK, true));
     timing.addView(
         text(
-            store.timingConfirmed()
-                ? "Regla guardada. Puedes cambiarla si el centro modifica la apertura."
-                : "Confirma con Cantolagua cuántos días antes se puede reservar. El valor inicial"
-                      + " de 2 días está pendiente de confirmar.",
+            "Las reservas se abren 4 días naturales antes, a la misma hora de la sesión. Por"
+                + " ejemplo: lunes 17:30 → jueves anterior 17:30.",
             15,
             MUTED,
             false));
@@ -630,7 +620,7 @@ public final class MainActivity extends Activity {
                       (d, w) -> {
                         try {
                           int lead = Integer.parseInt(e.getText().toString());
-                          store.timing(lead, store.opening());
+                          store.timing(lead);
                           changed();
                         } catch (Exception ex) {
                           toast("Elige un número entre 0 y 14");
@@ -640,37 +630,7 @@ public final class MainActivity extends Activity {
                   .show();
             },
             false));
-    timing.addView(
-        button(
-            "Hora de apertura: " + store.opening(),
-            () ->
-                new TimePickerDialog(
-                        this,
-                        (p, h, m) -> {
-                          store.timing(store.lead(), LocalTime.of(h, m));
-                          changed();
-                        },
-                        store.opening().getHour(),
-                        store.opening().getMinute(),
-                        true)
-                    .show(),
-            false));
-    if (!store.timingConfirmed())
-      timing.addView(
-          button(
-              "Confirmar esta regla de apertura",
-              () ->
-                  confirm(
-                      "Confirmar apertura",
-                      store.lead()
-                          + " días antes a las "
-                          + store.opening()
-                          + ". Confirma que esta es la regla de Cantolagua.",
-                      () -> {
-                        store.timing(store.lead(), store.opening());
-                        changed();
-                      }),
-              false));
+    timing.addView(text("Hora de apertura: la misma hora de cada actividad", 16, INK, true));
     timing.addView(
         text(
             "Zona horaria: Europe/Madrid. El cambio de hora de verano se ajusta automáticamente.",

@@ -52,10 +52,10 @@ public final class Plan {
     public final LocalDate date;
     public final Instant release;
 
-    public Job(Slot s, LocalDate d, int lead, LocalTime opening) {
+    public Job(Slot s, LocalDate d, int lead) {
       slot = s;
       date = d;
-      release = d.minusDays(lead).atTime(opening).atZone(ZONE).toInstant();
+      release = d.minusDays(lead).atTime(LocalTime.parse(s.time)).atZone(ZONE).toInstant();
     }
 
     public String key() {
@@ -97,11 +97,7 @@ public final class Plan {
   }
 
   public static List<Job> jobs(
-      Instant now,
-      int lead,
-      LocalTime opening,
-      List<Slot> template,
-      Map<String, List<Slot>> overrides) {
+      Instant now, int lead, List<Slot> template, Map<String, List<Slot>> overrides) {
     if (lead < 0 || lead > 14) throw new IllegalArgumentException("Antelación fuera de rango");
     List<Job> out = new ArrayList<>();
     Set<String> seen = new HashSet<>();
@@ -120,7 +116,7 @@ public final class Plan {
       List<Slot> slots = overrides.getOrDefault(monday(d).toString(), template);
       for (Slot s : slots)
         if (s.day == d.getDayOfWeek().getValue() - 1) {
-          Job j = new Job(s, d, lead, opening);
+          Job j = new Job(s, d, lead);
           if (d.atTime(LocalTime.parse(s.time)).atZone(ZONE).toInstant().isAfter(now)
               && !j.release.isBefore(now.minusSeconds(90))
               && seen.add(j.key())) out.add(j);

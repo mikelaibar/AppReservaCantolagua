@@ -129,28 +129,14 @@ public final class Store extends SQLiteOpenHelper {
         c.doFinal(Base64.decode(prefs.getString("secret", ""), Base64.NO_WRAP)), "UTF-8");
   }
 
-  public boolean timingConfirmed() {
-    return prefs.getBoolean("timing_confirmed", false);
-  }
-
   public int lead() {
-    return prefs.getInt("lead", 2);
+    return prefs.getInt("lead", 4);
   }
 
-  public LocalTime opening() {
-    return LocalTime.parse(prefs.getString("opening", "07:30"));
-  }
-
-  public void timing(int lead, LocalTime opening) {
+  public void timing(int lead) {
     if (lead < 0 || lead > 14) throw new IllegalArgumentException();
     synchronized (LOCK) {
-      save(
-          prefs
-              .edit()
-              .putInt("lead", lead)
-              .putString("opening", opening.toString())
-              .putBoolean("timing_confirmed", true)
-              .putString("revision", UUID.randomUUID().toString()));
+      save(prefs.edit().putInt("lead", lead).putString("revision", UUID.randomUUID().toString()));
     }
   }
 
@@ -229,7 +215,7 @@ public final class Store extends SQLiteOpenHelper {
   }
 
   public List<Plan.Job> jobs() {
-    List<Plan.Job> jobs = Plan.jobs(Instant.now(), lead(), opening(), template(), overrides());
+    List<Plan.Job> jobs = Plan.jobs(Instant.now(), lead(), template(), overrides());
     jobs.removeIf(j -> attempted(j.key()));
     return jobs;
   }

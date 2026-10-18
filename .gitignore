@@ -8,3 +8,5 @@ artifacts/*.sha256
 *.password
 local.properties
 __pycache__/
+
+artifacts/*.zip
