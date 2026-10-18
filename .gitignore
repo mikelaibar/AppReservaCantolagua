@@ -1,0 +1,10 @@
+.tools/
+android/build/
+artifacts/*.apk
+artifacts/*.sha256
+*.jks
+*.p12
+*.keystore
+*.password
+local.properties
+__pycache__/
