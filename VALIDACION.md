@@ -58,4 +58,6 @@ La regla de reserva sigue siendo **cuatro días naturales antes, a la misma hora
 
 ## Límites
 
+El emulador funciona sin aceleración por hardware. Su lanzador Quickstep mostró un aviso de falta de respuesta durante la captura, por lo que esa captura no se utiliza como evidencia visual ni se incluye en la entrega. Las comprobaciones de descarga, datos y callbacks de la aplicación se completaron.
+
 La carga del calendario y el arranque en segundo plano están comprobados. Sigue pendiente observar una reserva programada completa en el móvil real. El teléfono necesita permisos, Internet, estar encendido y primer desbloqueo tras reiniciar; no se garantiza plaza. Las políticas de batería de cada fabricante y la red de cada dispositivo pueden afectar a la ejecución.
