@@ -17,18 +17,25 @@ public final class ClubClient {
       PAGE = BASE + "/reservas/actividades.aspx";
   private final CookieManager cookies =
       new CookieManager(null, CookiePolicy.ACCEPT_ORIGINAL_SERVER);
+  static final String USER_AGENT = "MiCantolagua/1.0.2";
   private final Transport transport;
+  private final LocalDate testDate;
 
   interface Transport {
     String send(String url, Map<String, String> fields, boolean mutation) throws Exception;
   }
 
   public ClubClient() {
-    transport = null;
+    this(null, null);
   }
 
-  ClubClient(Transport t) {
-    transport = t;
+  ClubClient(Transport transport) {
+    this(transport, null);
+  }
+
+  ClubClient(Transport transport, LocalDate date) {
+    this.transport = transport;
+    this.testDate = date;
   }
 
   public static class Problem extends Exception {
@@ -80,7 +87,7 @@ public final class ClubClient {
       c.setConnectTimeout(12000);
       c.setReadTimeout(12000);
       c.setInstanceFollowRedirects(false);
-      c.setRequestProperty("User-Agent", "MiCantolagua/1.0 Android");
+      c.setRequestProperty("User-Agent", USER_AGENT);
       c.setRequestProperty("Accept", mutation ? "application/json" : "text/html,application/json");
       c.setRequestProperty("Referer", PAGE);
       c.setRequestProperty("Cache-Control", "no-cache");
@@ -156,7 +163,66 @@ public final class ClubClient {
   }
 
   public List<Session> catalogue() throws Exception {
-    return parse(signed(request(PAGE, null, false)), LocalDate.now(Plan.ZONE));
+    return calendar(true);
+  }
+
+  public List<Session> publicCatalogue() throws Exception {
+    return calendar(false);
+  }
+
+  private Document calendarDocument(String html, boolean authenticated) throws Problem {
+    if (authenticated) return signed(html);
+    Document document = Jsoup.parse(html, PAGE);
+    if (document.selectFirst("#frmLogin") != null)
+      throw new Problem("Cantolagua pide iniciar sesión para consultar este calendario");
+    return document;
+  }
+
+  private List<Session> calendar(boolean authenticated) throws Exception {
+    LocalDate today = testDate != null ? testDate : LocalDate.now(Plan.ZONE);
+    Document document = calendarDocument(request(PAGE, null, false), authenticated);
+    LinkedHashMap<String, Session> sessions = new LinkedHashMap<>();
+    addSessions(sessions, parse(document, today));
+    // Some mobile responses contain just one day's cards and link to the other tabs.
+    // Follow only the calendar's own date links; booking/cancellation links are never read.
+    LinkedHashMap<String, LocalDate> tabs = new LinkedHashMap<>();
+    for (Element link : document.select(".Clases_EncabezadoDia .Clases_Dia a[href]")) {
+      URI uri = safe(link.attr("href"), false);
+      Map<String, String> parameters = query(uri);
+      if (!uri.getPath().equals("/reservas/actividades.aspx")
+          || parameters.size() != 1
+          || !parameters.containsKey("dia"))
+        throw new Problem("Enlace de día inesperado en el calendario");
+      LocalDate date = LocalDate.parse(parameters.get("dia"));
+      if (Math.abs(ChronoUnit.DAYS.between(today, date)) > 45)
+        throw new Problem("El calendario enlaza una fecha fuera de rango");
+      tabs.put(uri.toString(), date);
+    }
+    if (tabs.size() > 14)
+      throw new Problem("El calendario contiene demasiados días para una consulta");
+    for (Map.Entry<String, LocalDate> tab : tabs.entrySet()) {
+      if (sessions.values().stream().anyMatch(session -> session.date.equals(tab.getValue())))
+        continue;
+      List<Session> day =
+          parse(calendarDocument(request(tab.getKey(), null, false), authenticated), today);
+      if (!day.isEmpty() && day.stream().noneMatch(session -> session.date.equals(tab.getValue())))
+        throw new Problem("Cantolagua no ha devuelto el día solicitado");
+      addSessions(sessions, day);
+    }
+    return new ArrayList<>(sessions.values());
+  }
+
+  private static void addSessions(Map<String, Session> destination, List<Session> incoming)
+      throws Problem {
+    for (Session session : incoming) {
+      Session previous = destination.get(session.id);
+      if (previous != null
+          && (!previous.date.equals(session.date)
+              || !previous.activity.equals(session.activity)
+              || !previous.time.equals(session.time)))
+        throw new Problem("Identificador de sesión incoherente en el calendario");
+      destination.put(session.id, session);
+    }
   }
 
   public static LocalDate sessionDate(String raw, LocalDate today) throws Problem {

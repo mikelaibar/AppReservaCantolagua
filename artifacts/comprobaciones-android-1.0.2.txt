@@ -1,0 +1,42 @@
+PASS Monday-only refresh preserves the rest of the weekly timetable on Android
+PASS weekday button opens hour picker for Lunes
+PASS first option for Lunes is 09:00 · Pilates
+PASS every option shows a clock for Lunes
+PASS picker saves the actual activity and hour under Lunes
+PASS weekday button opens hour picker for Martes
+PASS first option for Martes is 09:20 · Step-Training
+PASS every option shows a clock for Martes
+PASS picker saves the actual activity and hour under Martes
+PASS weekday button opens hour picker for Miércoles
+PASS first option for Miércoles is 09:00 · Movilidad
+PASS every option shows a clock for Miércoles
+PASS picker saves the actual activity and hour under Miércoles
+PASS weekday button opens hour picker for Jueves
+PASS first option for Jueves is 09:20 · Step-Training
+PASS every option shows a clock for Jueves
+PASS picker saves the actual activity and hour under Jueves
+PASS unpublished Friday offers hours without inventing Pilates
+RESULT: 18 calendar device checks passed; no web requests.
+
+PASS confirmed four-day rule is the installation default
+PASS Keystore encrypted credential round trip
+PASS new credentials pause automation
+PASS credentials survive store reopening
+PASS weekly template saved
+PASS one-week override preserves future template
+PASS reset week restores template
+PASS durable claim created before mutation
+PASS duplicate job claim blocked
+PASS duplicate canonical session claim blocked
+PASS interrupted mutation remains uncertain
+PASS confirmed outcome persisted
+PASS exact alarm permission granted for test
+PASS scheduler creates private immutable alarm intent
+PASS exact alarm starts foreground service while app UI is closed
+PASS release activity launches on Android 15
+PASS settings display confirmed booking rule
+PASS history tab opens without credentials
+PASS weekly plan tab opens
+RESULT: 19 device checks passed; no live requests sent.
+
+

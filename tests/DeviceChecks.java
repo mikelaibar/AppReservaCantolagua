@@ -101,6 +101,13 @@ public final class DeviceChecks extends Instrumentation {
       s.enabled(false);
       Scheduler.refresh(getTargetContext());
       s.erase();
+      // Keep this deterministic UI check offline; live HTTP has its own opt-in test.
+      ClubClient.Session fixture = new ClubClient.Session();
+      fixture.date = LocalDate.now(Plan.ZONE);
+      fixture.time = "09:20";
+      fixture.activity = "14";
+      fixture.name = "Step-Training";
+      s.catalogue(Collections.singletonList(fixture));
       Intent launch =
           new Intent(getTargetContext(), MainActivity.class)
               .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);

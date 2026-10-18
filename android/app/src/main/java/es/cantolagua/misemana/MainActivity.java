@@ -65,6 +65,7 @@ public final class MainActivity extends Activity {
         toast("Revisa tu configuración");
       }
       render();
+      if (tab == 0) ensureTimetable();
     }
   }
 
@@ -155,6 +156,7 @@ public final class MainActivity extends Activity {
               () -> {
                 tab = n;
                 render();
+                if (tab == 0) ensureTimetable();
               },
               tab == i);
       LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(0, dp(48), 1);
@@ -174,6 +176,29 @@ public final class MainActivity extends Activity {
   }
 
   private void showWeek() {
+    LinearLayout calendar = card();
+    calendar.addView(text("Horarios de Cantolagua", 20, INK, true));
+    if (busy) calendar.addView(text("Consultando el calendario…", 16, GREEN, true));
+    else if (!store.catalogueError().isEmpty())
+      calendar.addView(
+          text("No se pudo actualizar: " + store.catalogueError(), 15, 0xff9b5722, true));
+    else if (store.currentCatalogue())
+      calendar.addView(
+          text(
+              store.catalogueCount()
+                  + " sesiones en la última consulta. Los horarios anteriores se conservan.",
+              15,
+              MUTED,
+              false));
+    else
+      calendar.addView(
+          text(
+              "Las clases publicadas se cargarán automáticamente. No hace falta conectar la cuenta"
+                  + " para verlas.",
+              15,
+              MUTED,
+              false));
+    calendar.addView(button("Actualizar horarios", () -> refreshTimetable(-1), false));
     LinearLayout status = card();
     status.addView(
         text(
@@ -358,13 +383,30 @@ public final class MainActivity extends Activity {
             false));
   }
 
+  private boolean staleTimetable() {
+    return !store.currentCatalogue()
+        || System.currentTimeMillis() - store.catalogueTime() > 5 * 60 * 1000;
+  }
+
+  private void ensureTimetable() {
+    if (!busy && staleTimetable()) refreshTimetable(-1);
+  }
+
   private void chooseSlot(int day) {
-    if (store.hasCredentials()
-        && store.verified()
-        && (!store.currentCatalogue()
-            || System.currentTimeMillis() - store.catalogueTime() > 5 * 60 * 1000)) {
-      refreshTimetable(day);
-    } else showTimeChoices(day);
+    if (staleTimetable()) refreshTimetable(day);
+    else showTimeChoices(day);
+  }
+
+  private static String calendarError(Exception error) {
+    if (error instanceof ClubClient.Problem) return error.getMessage();
+    if (error instanceof java.net.SocketTimeoutException)
+      return "Cantolagua ha tardado demasiado en responder. Vuelve a intentarlo";
+    if (error instanceof javax.net.ssl.SSLException)
+      return "No se pudo verificar la conexión HTTPS. Revisa la fecha del dispositivo y las"
+                 + " actualizaciones de Android";
+    if (error instanceof java.net.UnknownHostException)
+      return "No se pudo localizar Cantolagua. Revisa la conexión a Internet";
+    return "No se pudo descargar el calendario. Revisa Internet y vuelve a intentarlo";
   }
 
   private void refreshTimetable(int day) {
@@ -373,28 +415,28 @@ public final class MainActivity extends Activity {
     render();
     worker.execute(
         () -> {
-          boolean updated = false;
+          String failure = null;
           try {
-            ClubClient client = new ClubClient();
-            client.login(store.user(), store.password());
-            store.catalogue(client.catalogue());
-            updated = true;
-          } catch (Exception ignored) {
+            store.catalogue(new ClubClient().publicCatalogue());
+          } catch (Exception error) {
+            failure = calendarError(error);
+            store.catalogueError(failure);
           }
-          final boolean success = updated;
+          final String problem = failure;
           runOnUiThread(
               () -> {
                 if (isFinishing() || isDestroyed()) return;
                 busy = false;
                 render();
-                if (success) showTimeChoices(day);
-                else
+                if (problem == null) {
+                  if (day >= 0) showTimeChoices(day);
+                } else if (day >= 0)
                   new AlertDialog.Builder(this)
                       .setTitle("No se pudo actualizar el horario")
                       .setMessage(
-                          "Puedes ver las horas y actividades guardadas de consultas anteriores."
-                              + " Las horas sin actividad se mostrarán como pendientes; no se les"
-                              + " asignará otra clase.")
+                          problem
+                              + ". Puedes consultar las horas guardadas; las actividades"
+                              + " desconocidas seguirán pendientes.")
                       .setPositiveButton(
                           "Ver horario guardado", (dialog, which) -> showTimeChoices(day))
                       .setNegativeButton("Cancelar", null)
@@ -453,12 +495,7 @@ public final class MainActivity extends Activity {
             .setPositiveButton(
                 "Actualizar",
                 (dialog, which) -> {
-                  if (store.hasCredentials()) refreshTimetable(day);
-                  else {
-                    toast("Conecta tu cuenta en Ajustes");
-                    tab = 2;
-                    render();
-                  }
+                  refreshTimetable(day);
                 })
             .setNegativeButton("Cancelar", null)
             .show();
@@ -785,7 +822,7 @@ public final class MainActivity extends Activity {
             MUTED,
             false));
     LinearLayout help = card();
-    help.addView(text("Mi Cantolagua · 1.0.1", 18, INK, true));
+    help.addView(text("Mi Cantolagua · 1.0.2", 18, INK, true));
     help.addView(
         text(
             "Aplicación independiente. No garantiza plaza si la clase se llena. La solicitud se"

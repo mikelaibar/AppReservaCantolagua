@@ -1,0 +1,13 @@
+Success
+PASS live Android HTTP client downloads the 26 published sessions
+PASS live response includes all four published dates
+PASS Tuesday Step-Training at 09:20 is present in real Android network response
+PASS activity starts with an empty timetable and no account
+PASS fresh installation loads the public calendar automatically: 
+PASS automatic refresh persists all 26 sessions without a seeded fixture
+PASS viewing the calendar does not require saved credentials
+PASS Tuesday picker shows Step-Training loaded over the live network
+PASS live checks leave reservations paused and send no bookings
+RESULT: 9 live Android network checks passed; public reads only.
+
+

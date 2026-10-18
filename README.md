@@ -4,8 +4,8 @@ Aplicación nativa independiente para programar reservas en [Cantolagua](https:/
 
 ## Instalar y empezar
 
-1. Descarga `artifacts/MiCantolagua-1.0.1.apk` en el móvil y ábrelo. Si ya usas 1.0.0, instala la actualización encima, sin desinstalar: conserva tu cuenta y horarios. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
-2. En **Ajustes**, escribe el usuario y contraseña que usas en Cantolagua y pulsa **Guardar y comprobar acceso**. Se cargarán las actividades publicadas en el centro. No se realiza ninguna reserva al comprobar el acceso.
+1. Descarga `artifacts/MiCantolagua-1.0.2.apk` en el móvil y ábrelo. Si ya usas una versión anterior, instala la actualización encima, sin desinstalar: conserva tu cuenta y horarios. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
+2. Abre **Mi semana**: el calendario público se carga automáticamente, sin necesitar una cuenta. Verás el número de sesiones descargadas o un error de conexión concreto. Para reservar, conecta después tu cuenta en **Ajustes → Guardar y comprobar acceso**. La verificación no realiza reservas.
 3. La regla confirmada ya está configurada: **4 días naturales antes, a la misma hora de la sesión**, hora de Madrid. Por ejemplo, lunes 17:30 → jueves anterior 17:30; martes 18:30 → viernes anterior 18:30. Cada actividad tiene su apertura propia. La antelación se puede cambiar en Ajustes si el centro modifica la regla.
 4. Permite **Alarmas y recordatorios** y **Notificaciones**. En los ajustes de batería del teléfono permite el funcionamiento sin restricciones para Mi Cantolagua. Si el fabricante tiene un ajuste de inicio automático, actívalo.
 5. En **Mi semana**, añade las actividades de cada día a **Todas las semanas**. Esta es tu plantilla habitual y se repite indefinidamente. **Solo una semana** permite quitar o añadir clases en una semana concreta sin cambiar las siguientes. **Volver al horario habitual** elimina esa excepción.
@@ -17,7 +17,7 @@ La app conserva un horario consultado, independiente del historial de reservas: 
 
 Siempre se ofrecen horas, incluso cuando todavía no hay un nombre guardado. En ese caso se indica **Actividad pendiente de consultar**: es una propuesta de hora, no una clase confirmada. La franja de mañana utiliza la hora observada para cada día (por ejemplo, 09:20 el martes); si aún no se conoce, se ofrecen 09:00 y 09:20 sin asignarles una actividad. Las horas habituales de tarde son 16:30, 17:30, 18:30, 19:30 y 20:30.
 
-El selector actualiza el calendario con la cuenta guardada si han pasado cinco minutos desde la última consulta, o al migrar de 1.0.0. **Actualizar** permite volver a consultarlo. Si no hay conexión, pide confirmación para mostrar el horario guardado. Un viernes aún no publicado conserva su nombre de consultas anteriores; si nunca se ha consultado, queda pendiente en lugar de recibir una actividad de otro día.
+**Mi semana** descarga el calendario público al abrirse si no hay una consulta válida reciente. Se actualiza cada cinco minutos al volver a esa pantalla o abrir el selector, y fuerza una consulta al actualizar desde una versión anterior. **Actualizar horarios** y **Actualizar** permiten consultar de nuevo. Ver los horarios no requiere conectar la cuenta; para reservar sí se verifica el calendario autenticado del socio. Si la descarga falla, la pantalla muestra el error y permite usar el horario guardado. Un viernes aún no publicado conserva su nombre de consultas anteriores; si nunca se ha consultado, queda pendiente en lugar de recibir una actividad de otro día.
 
 **Otra hora (manual)** permite configurar una combinación no verificada de hora y actividad, con una confirmación explícita. Todas las opciones muestran la hora. Solo se enviará una reserva si la web publica exactamente la actividad, fecha y hora elegidas. Los horarios ya seleccionados por ti se conservan al actualizar: revisa y quita los que hayas añadido por error.
 
@@ -57,7 +57,7 @@ bash scripts/test.sh
 bash scripts/build_android.sh
 ```
 
-`CANTOLAGUA_TOOLS` permite cambiar la carpeta de herramientas (por defecto `/workspace/.tools`). El APK se genera en `artifacts/MiCantolagua-1.0.1.apk`, junto con su SHA-256. La compilación verifica la firma del APK. Es una compilación de distribución, sin `debuggable` y con componentes internos no exportados.
+`CANTOLAGUA_TOOLS` permite cambiar la carpeta de herramientas (por defecto `/workspace/.tools`). El APK se genera en `artifacts/MiCantolagua-1.0.2.apk`, junto con su SHA-256. La compilación verifica la firma del APK. Es una compilación de distribución, sin `debuggable` y con componentes internos no exportados.
 
 La firma se conserva fuera del repositorio en `/workspace/.cantolagua-android-signing`, o en `CANTOLAGUA_SIGNING_DIR`. **Guarda una copia privada de esta carpeta para firmar futuras actualizaciones**. No la subas al repositorio. Una instalación nueva que genere otra firma no podrá actualizar el APK instalado; habrá que desinstalar antes, perdiendo los datos locales.
 
@@ -65,7 +65,7 @@ La firma se conserva fuera del repositorio en `/workspace/.cantolagua-android-si
 
 `bash scripts/test.sh` ejecuta las pruebas de fechas, cambio de hora, repetición semanal, excepciones, parsing del calendario, protección de enlaces, confirmación de reservas y conservación del horario por día y hora. Usa transporte simulado: no envía reservas reales.
 
-`bash scripts/build_device_tests.sh` construye una APK de instrumentación separada. **Se ejecuta exclusivamente en un emulador limpio: borra los datos locales de la aplicación de destino**. Prueba Keystore, persistencia, exclusión de duplicados, arranque desde una alarma con la interfaz cerrada y selectores reales de cada día. No se distribuye con la aplicación. Ver `VALIDACION.md` para el resultado de esta entrega.
+`bash scripts/build_device_tests.sh` construye una APK de instrumentación separada. **Se ejecuta exclusivamente en un emulador limpio: borra los datos locales de la aplicación de destino**. Las pruebas deterministas comprueban Keystore, persistencia, exclusión de duplicados, alarmas y selectores de cada día sin realizar conexiones. La prueba opcional `NetworkDeviceChecks` consulta la web pública real y verifica la carga automática desde una instalación sin cuenta; no inicia sesión ni envía reservas. No se distribuye con la aplicación. Ver `VALIDACION.md` para el resultado de esta entrega.
 
 El diagnóstico opcional `tests/LiveReadOnly.java` permite verificar acceso y calendario desde una terminal privada. Lee las credenciales de forma interactiva, no acepta contraseñas en argumentos ni envía reservas. No guardar credenciales en código, comandos, logs ni archivos de configuración.
 
@@ -74,3 +74,8 @@ El diagnóstico opcional `tests/LiveReadOnly.java` permite verificar acceso y ca
 El sitio no proporciona una API pública documentada. `ClubClient.java` interpreta el formulario y calendario actuales. Comprueba fecha, tipo de actividad, hora, identificador de sesión, destino HTTPS y persona seleccionada antes de enviar una reserva. Cualquier cambio incompatible del sitio detiene el intento y requiere revisar la integración. Las cookies solo viven en memoria durante cada ejecución.
 
 Al reiniciar el teléfono o actualizar la aplicación, el receptor del sistema únicamente vuelve a programar la alarma. El servicio de tipo `dataSync` comienza desde una alarma exacta autorizada, no desde el arranque del sistema, respetando las restricciones de Android 15.
+
+
+### Descarga del calendario completo
+
+La web devuelve una vista móvil de un solo día cuando el identificador HTTP contiene `Android`. Esto explicaba por qué las versiones anteriores solo recibían las siete sesiones del lunes, mientras un navegador de ordenador veía 26 hasta el jueves. La 1.0.2 solicita la vista completa con el identificador de la app sin ese indicador móvil. Si la web aun así devuelve pestañas de días, consulta exclusivamente sus enlaces de calendario y reúne las sesiones publicadas. Esta lógica se aplica tanto al calendario público como al autenticado utilizado para reservar. Las pruebas incluyen las respuestas móviles reales de los cuatro días y verifican que jamás se siga un enlace de reserva o cancelación durante una lectura.

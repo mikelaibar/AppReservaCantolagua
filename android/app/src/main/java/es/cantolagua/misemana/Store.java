@@ -197,7 +197,9 @@ public final class Store extends SQLiteOpenHelper {
           prefs
               .edit()
               .putString("catalogue", Timetable.encode(history))
-              .putInt("catalogue_schema", 2)
+              .putInt("catalogue_schema", 3)
+              .putInt("catalogue_count", sessions.size())
+              .putString("catalogue_error", "")
               .putLong("catalogue_time", System.currentTimeMillis()));
     }
   }
@@ -211,13 +213,25 @@ public final class Store extends SQLiteOpenHelper {
   }
 
   public boolean currentCatalogue() {
-    return prefs.getInt("catalogue_schema", 0) >= 2;
+    return prefs.getInt("catalogue_schema", 0) >= 3;
   }
 
   public List<Plan.Slot> catalogue() {
     List<Plan.Slot> slots = new ArrayList<>();
     for (Timetable.Entry e : timetable()) slots.add(e.slot);
     return slots;
+  }
+
+  public int catalogueCount() {
+    return prefs.getInt("catalogue_count", catalogue().size());
+  }
+
+  public String catalogueError() {
+    return prefs.getString("catalogue_error", "");
+  }
+
+  public void catalogueError(String error) {
+    save(prefs.edit().putString("catalogue_error", error));
   }
 
   public long catalogueTime() {

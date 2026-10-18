@@ -1,37 +1,30 @@
-# Validación de la entrega 1.0.1
+# Validación de la entrega 1.0.2
 
-Fecha: 18 de octubre de 2026. Paquete: `es.cantolagua.misemana`. Versión de Android: mínimo 8/API 26; compilación y destino API 35. VersionCode 2, misma firma que 1.0.0.
+Fecha: 18 de octubre de 2026. Paquete `es.cantolagua.misemana`, versionCode 3. Android mínimo 8/API 26; compilación y destino API 35. Misma firma de distribución que las versiones anteriores.
 
-## Corrección del horario semanal
+## Fallo reproducido y corregido
 
-La versión anterior sustituía todo el catálogo guardado con cada consulta. Una publicación parcial podía hacer perder los demás días; además, la selección manual ofrecía una lista general de nombres sin hora. Ahora el horario consultado se conserva por **día de la semana y hora**, separado de las reservas elegidas y de sus resultados.
+La web cambia el contenido según el identificador HTTP. Con el que utilizaban las versiones anteriores, `MiCantolagua/1.0 Android`, devuelve una vista móvil con pestañas y únicamente las **siete sesiones del lunes**. Sin el indicador móvil devuelve el calendario completo, con **26 sesiones de lunes a jueves** en la fecha de la comprobación. La 1.0.1 conservaba los datos recibidos, pero no recorría las pestañas de días: el calendario guardado no podía completarse. Las pruebas anteriores del selector utilizaban la respuesta de ordenador y no cubrían esa diferencia.
 
-- Cada opción empieza por su hora. El martes empieza por **09:20 · Step-Training**; el Pilates de las 09:00 corresponde al lunes.
-- La clase conserva su hora concreta, aunque la fila general de la tabla web indique otra franja (09:00 frente a 09:20).
-- Una consulta que solo devuelve el lunes conserva martes a viernes de consultas anteriores.
-- Una observación más reciente actualiza esa combinación de día y hora; una publicación antigua no la sustituye. Se conservan las actividades simultáneas.
-- Siempre se ofrecen horas habituales. Cuando no se conoce la clase, se muestra **Actividad pendiente de consultar**; no se toma el nombre de otro día.
-- La actualización del APK conserva credenciales y planificación. El catálogo antiguo se migra; el selector consulta de nuevo con la cuenta guardada y conserva las observaciones anteriores.
-- El servicio de reservas también guarda los horarios que consulta. Sigue resolviendo el identificador concreto de la sesión en el momento de reservar, sin reutilizar identificadores de sesiones pasadas.
+La 1.0.2 solicita la vista completa. Si la web devuelve de nuevo la vista móvil, consulta los enlaces de cada día publicado y reúne las sesiones. Se comprueba el origen HTTPS, la ruta, la fecha y la coherencia de las sesiones; no se siguen enlaces de reserva ni de cancelación durante una consulta. Esto se aplica tanto al calendario público como al autenticado usado para reservar.
 
-## Evidencia de esta entrega
+Además, **Mi semana carga automáticamente el calendario público** desde una instalación vacía, sin necesitar conectar la cuenta. El nuevo indicador de formato invalida la consulta incompleta de versiones anteriores y fuerza una descarga al actualizar. La pantalla muestra progreso, número de sesiones y errores de conexión. Se conserva el horario de semanas previas y no se asignan nombres inventados a horas desconocidas.
 
-- **58 pruebas JVM correctas:** 39 de integración/calendario/reservas y 19 del horario guardado. Cubren el ejemplo del martes, los demás días, consultas parciales, persistencia, migración, semanas posteriores, actividades simultáneas y horas sin nombre.
-- **18 pruebas del selector en Android 15 correctas en el APK final:** se pulsaron los botones reales de lunes a jueves, se verificaron las primeras opciones y las horas de cada fila, y se seleccionó la actividad comprobando su día y hora guardados. El viernes sin información ofrece horas sin inventar Pilates.
-- **19 pruebas generales en Android 15 correctas en el APK final:** Keystore, persistencia, plantilla, excepciones, exclusión de duplicados, tres pestañas y arranque desde alarma exacta con la interfaz cerrada.
-- **Actualización comprobada desde 1.0.0:** dos comprobaciones adicionales verificaron la conservación de contraseña cifrada y selección semanal con datos sintéticos. Las dos versiones tienen el mismo certificado de firma.
-- **Consulta autenticada real de solo lectura:** Cantolagua devuelve 26 sesiones; se confirmó Step-Training el martes a las 09:20. La contraseña se introdujo de forma interactiva, no se guardó en fuentes, pruebas ni APK. La muestra HTML de pruebas procede exclusivamente del calendario público, sin datos de la cuenta.
-- APK firmado con firmas v2/v3 válidas y SHA-256 adyacente. Compilación de distribución sin `debuggable`, sin tráfico HTTP claro y sin copia de seguridad de datos.
+## Resultados
 
-Captura del selector real del martes durante la prueba de Android:
+- **74 comprobaciones JVM correctas:** 39 generales, 19 del horario persistente y 16 de descarga. Las nuevas usan las respuestas móviles públicas reales de los cuatro días, reproducen los siete registros iniciales, siguen las pestañas hasta reunir 26, verifican Step-Training del martes 09:20 y comprueban que no se siga una cancelación ni se acepte una sesión expirada.
+- **9 comprobaciones con red real desde Android 15 correctas:** el cliente HTTP de la aplicación descargó 26 sesiones de cuatro fechas. Se abrió después la pantalla con datos vacíos y sin credenciales; su carga automática descargó y guardó de nuevo el calendario real. Se pulsó el botón del martes y apareció `09:20 · Step-Training`. No se inyectó una copia HTML en esta prueba.
+- **18 comprobaciones deterministas del selector en Android 15 correctas**, incluyendo todos los botones de lunes a jueves y el viernes todavía no publicado.
+- **19 comprobaciones generales en Android 15 correctas**, incluyendo Keystore, persistencia, exclusión de duplicados, tres pestañas y arranque desde una alarma con la interfaz cerrada.
+- Compilación, firma v2/v3 y alineación del APK verificadas. SHA-256 junto al archivo. Sin modo depurable, sin tráfico HTTP claro y sin copia de seguridad de datos.
 
-![Martes: horas y actividades](artifacts/martes-1.0.1.png)
+Resultados de dispositivo: `artifacts/comprobaciones-android-1.0.2.txt` y `artifacts/comprobaciones-red-1.0.2.txt`. Solo se realizaron lecturas públicas durante la prueba de red; no hubo inicio de sesión, envío de reservas ni repetición de la inscripción en lista de espera ya completada.
 
-Los resultados de dispositivo están en `artifacts/comprobaciones-android-1.0.1.txt`. No se ha enviado ninguna reserva real nueva ni se ha repetido la inscripción en lista de espera completada anteriormente.
+## Red del entorno de pruebas
 
-## Regla de reserva
+La nube requiere su proxy de salida. El primer intento del emulador falló por resolución DNS. La prueba se completó configurando en la **instrumentación** la ruta del proxy del entorno y su certificado de confianza, previamente comprobado mediante una conexión TLS verificada. Se utilizó el gestor de confianza estándar y se mantuvo la verificación del nombre del servidor. No se deshabilitó TLS ni se aceptaron certificados arbitrarios.
 
-Se mantiene la regla confirmada por el usuario: **cuatro días naturales antes, a la misma hora de cada sesión, Europe/Madrid**. El lunes 17:30 se reserva el jueves anterior 17:30; martes el viernes; miércoles el sábado; jueves el domingo; viernes el lunes. Los cambios de hora se calculan en la zona del centro.
+El certificado y esta configuración solo se aplicaron al proceso de pruebas. **El APK de distribución no incluye el certificado del entorno ni cambios en la confianza HTTPS** y usa la conexión normal del móvil. La aplicación muestra un error si el dispositivo no puede resolver el dominio, conectar o validar HTTPS.
 
 ## Repetir la validación
 
@@ -42,10 +35,10 @@ bash scripts/build_android.sh
 bash scripts/build_device_tests.sh
 ```
 
-**Solo en un emulador aislado: la instrumentación borra los datos locales de Mi Cantolagua.**
+**Solo en emulador aislado: la instrumentación borra datos locales y crea estados sintéticos.**
 
 ```sh
-adb install -r artifacts/MiCantolagua-1.0.1.apk
+adb install -r artifacts/MiCantolagua-1.0.2.apk
 adb install -r android/build/device-tests/device-tests.apk
 adb shell appops set es.cantolagua.misemana SCHEDULE_EXACT_ALARM allow
 adb shell pm grant es.cantolagua.misemana android.permission.POST_NOTIFICATIONS
@@ -53,10 +46,16 @@ adb shell am instrument -w es.cantolagua.misemana.tests/es.cantolagua.misemana.C
 adb shell am instrument -w es.cantolagua.misemana.tests/es.cantolagua.misemana.DeviceChecks
 ```
 
-Resultados esperados: `18 calendar device checks passed` y `19 device checks passed`. Una finalización del comando sin esos resultados no cuenta como prueba correcta. Para repetir la comprobación de actualización, instala primero 1.0.0, ejecuta `UpgradeSeed` con la APK de instrumentación firmada, instala 1.0.1 sin desinstalar y ejecuta `CalendarDeviceChecks` con `-e expectUpgrade true`. Esta última ejecución incluye dos comprobaciones adicionales y devuelve 20.
+La prueba de red es opcional y consulta la web pública real:
+
+```sh
+adb shell am instrument -w es.cantolagua.misemana.tests/es.cantolagua.misemana.NetworkDeviceChecks
+```
+
+Las expectativas de 26 sesiones y Step-Training corresponden al calendario publicado en la fecha de esta validación y deben revisarse si cambia. En una nube con proxy, la instrumentación admite `proxyHost`, `proxyPort` y `useRuntimeCa`. Para incluir únicamente en la APK de pruebas el certificado aprobado del entorno, define `CANTOLAGUA_TEST_CA_FILE` al construirla. No incluyas credenciales o certificados privados. Las pruebas deterministas no necesitan Internet.
+
+La regla de reserva sigue siendo **cuatro días naturales antes, a la misma hora de la clase, Europe/Madrid**. Los horarios seleccionados por el usuario no se cambian automáticamente al actualizar el catálogo. Se conserva el registro de la entrega anterior en `VALIDACION-1.0.1.md`.
 
 ## Límites
 
-El emulador no tiene aceleración por hardware y se amplió su watchdog durante su arranque. La aplicación distribuida no depende de ese ajuste. No se han probado las políticas de batería de todos los fabricantes ni la red móvil del usuario. La primera reserva programada completa todavía debe observarse en el teléfono real.
-
-El teléfono necesita permisos, Internet, estar encendido y haberse desbloqueado una vez tras reiniciar. No se garantiza obtener plaza. Los nombres guardados son referencias de consultas previas: una reserva solo se envía cuando el calendario actual confirma exactamente la actividad, fecha y hora elegidas.
+La carga del calendario y el arranque en segundo plano están comprobados. Sigue pendiente observar una reserva programada completa en el móvil real. El teléfono necesita permisos, Internet, estar encendido y primer desbloqueo tras reiniciar; no se garantiza plaza. Las políticas de batería de cada fabricante y la red de cada dispositivo pueden afectar a la ejecución.
