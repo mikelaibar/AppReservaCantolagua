@@ -96,6 +96,21 @@ public final class Plan {
     return a.toString();
   }
 
+  public static boolean retryAllowed(String job, int lead, Instant now) {
+    try {
+      if (lead < 0 || lead > 14) return false;
+      String[] parts = job.split("\\|", -1);
+      if (parts.length != 3 || !parts[1].matches("[0-9]+")) return false;
+      LocalDate date = LocalDate.parse(parts[0]);
+      LocalTime time = LocalTime.parse(parts[2]);
+      Instant session = date.atTime(time).atZone(ZONE).toInstant();
+      Instant release = date.minusDays(lead).atTime(time).atZone(ZONE).toInstant();
+      return session.isAfter(now) && now.isBefore(release.plusSeconds(90));
+    } catch (RuntimeException e) {
+      return false;
+    }
+  }
+
   public static List<Job> jobs(
       Instant now, int lead, List<Slot> template, Map<String, List<Slot>> overrides) {
     if (lead < 0 || lead > 14) throw new IllegalArgumentException("Antelación fuera de rango");

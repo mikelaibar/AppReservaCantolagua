@@ -596,13 +596,16 @@ public final class MainActivity extends Activity {
               false));
     content.addView(text("Resultados", 23, INK, true));
     List<String[]> history = store.history();
-    if (history.isEmpty())
+    if (history.isEmpty()) {
       content.addView(
           text(
-              "Aquí verás las reservas confirmadas y los intentos que necesiten tu atención.",
+              "No hay intentos registrados para esta cuenta en esta instalación. Actualizar"
+                  + " horarios o comprobar la conexión no envía una reserva.",
               16,
               MUTED,
               false));
+      content.addView(button("Ver mis reservas en Cantolagua", this::website, false));
+    }
     for (String[] h : history) {
       LinearLayout c = card();
       c.addView(text(h[1], 18, INK, true));
@@ -613,22 +616,31 @@ public final class MainActivity extends Activity {
               h[2].equals("Reservada") || h[2].equals("Ya reservada") ? GREEN : 0xff9b5722,
               true));
       c.addView(text(h[3], 15, MUTED, false));
+      c.addView(text(Instant.ofEpochMilli(Long.parseLong(h[4])).atZone(Plan.ZONE)
+          .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss '· Madrid'")),
+          14, MUTED, false));
       c.addView(button("Ver en Cantolagua", this::website, false));
-      if (!h[2].equals("Reservada") && !h[2].equals("Ya reservada"))
-        c.addView(
+      if (!h[2].equals("Reservada") && !h[2].equals("Ya reservada")) {
+        if (!Plan.retryAllowed(h[0], store.lead(), Instant.now())) {
+          c.addView(text("El margen de reintento de 90 segundos desde la apertura ya ha pasado."
+              + " Este resultado se conserva. Comprueba la plaza o la lista de espera en la web.",
+              15, MUTED, false));
+        } else c.addView(
             button(
                 "He revisado la web: permitir otro intento",
                 () ->
                     confirm(
                         "Evitar duplicados",
-                        "Confirma que has revisado la web y NO tienes esta reserva. Si la apertura"
-                            + " aún está dentro del margen de 90 segundos, se permitirá otro"
-                            + " intento; si ya pasó, no se recupera automáticamente.",
+                        "Confirma que has revisado la web y NO tienes esta reserva. Se permitirá"
+                            + " otro intento dentro del margen de apertura si las reservas están"
+                            + " activadas. El resultado seguirá visible mientras se prepara.",
                         () -> {
-                          store.retryAfterReview(h[0]);
+                          if (!store.retryAfterReview(h[0]))
+                            toast("Ya no se puede reintentar. El historial se conserva; revisa la web");
                           changed();
                         }),
                 false));
+      }
     }
     content.addView(
         text(

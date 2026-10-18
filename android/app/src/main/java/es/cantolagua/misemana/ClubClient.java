@@ -1,6 +1,7 @@
 package es.cantolagua.misemana;
 
 import java.io.*;
+import java.math.BigDecimal;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
 import java.time.*;
@@ -17,7 +18,7 @@ public final class ClubClient {
       PAGE = BASE + "/reservas/actividades.aspx";
   private final CookieManager cookies =
       new CookieManager(null, CookiePolicy.ACCEPT_ORIGINAL_SERVER);
-  static final String USER_AGENT = "MiCantolagua/1.0.2";
+  static final String USER_AGENT = "MiCantolagua/1.0.4";
   private final Transport transport;
   private final LocalDate testDate;
 
@@ -45,7 +46,7 @@ public final class ClubClient {
   }
 
   public static final class Session {
-    public String id, activity, name, time, href, person = "", room, status;
+    public String id, activity, name, time, href, person = "", room, status, detail;
     public LocalDate date;
     public boolean booked, waitlisted, open, paid;
 
@@ -284,14 +285,18 @@ public final class ClubClient {
       s.date = sessionDate(e.attr("data-fecha"), today);
       s.person = person;
       s.room = e.select(".Clase_Sala").text();
-      s.booked = e.hasClass("Clase__Inscrito");
+      boolean pendingPayment = e.hasClass("reserva__sinpagar")
+          || !e.attr("data-idlinea").trim().isEmpty();
+      s.booked = e.hasClass("Clase__Inscrito") && !pendingPayment;
       s.waitlisted = e.hasClass("Clase__EnListaEspera");
       String amount = e.attr("data-importe").trim();
-      s.paid = !amount.isEmpty() && !amount.matches("0+([.,]0+)?");
+      int price = priceState(amount);
+      s.paid = pendingPayment || price > 0;
       boolean full = e.hasClass("Clase__ListaEspera") || s.waitlisted || e.hasClass("Clase__Llena");
       boolean future = e.hasClass("Clase__Futura") || e.hasClass("Clase__Pasada");
       s.open =
-          !s.booked && !full && !future && !s.paid && e.hasClass("Clase__Clicable") && direct(s);
+          !s.booked && !full && !future && !s.paid && price == 0
+              && e.hasClass("Clase__Clicable") && direct(s);
       s.status =
           s.booked
               ? "Ya reservada"
@@ -299,12 +304,32 @@ public final class ClubClient {
                   ? "En lista de espera"
                   : s.paid
                       ? "Requiere pago"
-                      : full
+                      : price < 0
+                          ? "Importe no reconocido"
+                          : full
                           ? "Completa"
                           : future ? "Aún no disponible" : s.open ? "Disponible" : "No disponible";
+      s.detail = pendingPayment
+          ? "Cantolagua muestra una inscripción pendiente de pago. Compruébala en la web"
+          : price != 0
+              ? "Importe indicado en el calendario: "
+                  + amount.replaceAll("[\\p{Cntrl}]", " ").substring(0, Math.min(amount.length(), 80))
+                  + ". No se ha enviado una reserva"
+              : "Estado consultado en Cantolagua. No se ha enviado una reserva";
       out.add(s);
     }
     return out;
+  }
+
+  // Calendar amounts are display strings (for example "0,00 €"), not raw numbers.
+  // Unknown formats remain blocked without claiming that a payment is required.
+  private static int priceState(String raw) {
+    String amount = raw.replace('\u00a0', ' ').replace('\u202f', ' ').trim();
+    if (amount.isEmpty()) return 0;
+    amount = amount.replaceFirst("^(?:€|EUR)\\s*", "")
+        .replaceFirst("\\s*(?:€|EUR)$", "").trim();
+    if (!amount.matches("[0-9]+(?:[.,][0-9]{1,2})?")) return -1;
+    return new BigDecimal(amount.replace(',', '.')).signum();
   }
 
   static Map<String, String> query(URI u) throws Exception {

@@ -68,6 +68,29 @@ public final class DeviceChecks extends Instrumentation {
           "interrupted mutation remains uncertain");
       s.finish(account, j, "Reservada", "Fixture");
       check(s.history().get(0)[2].equals("Reservada"), "confirmed outcome persisted");
+      Plan.Job retry = new Plan.Job(slot, LocalDate.now(Plan.ZONE).plusDays(5), 4);
+      check(s.claim(account, retry, "950"), "synthetic failed attempt recorded");
+      s.finish(account, retry, "Requiere pago", "Synthetic previous result");
+      check(s.retryAfterReview(retry.key()), "review permits retry before its deadline");
+      check(s.history().stream().anyMatch(h -> h[0].equals(retry.key())
+          && h[2].equals(Store.RETRY_READY)), "reviewed retry remains visible in history");
+      check(!s.attempted(retry.key()), "reviewed retry becomes eligible for the scheduler");
+      Store reopened = new Store(getTargetContext());
+      check(reopened.history().stream().anyMatch(h -> h[0].equals(retry.key())
+          && h[2].equals(Store.RETRY_READY)), "pending retry survives reopening the database");
+      reopened.close();
+      check(s.claim(account, retry, "950"), "retry reclaims the existing history row");
+      check(!s.claim(account, retry, "950"), "retry cannot submit the same claim twice");
+      s.finish(account, retry, "Reservada", "Synthetic confirmation");
+      check(!s.retryAfterReview(retry.key()), "confirmed reservation cannot be reopened");
+      Plan.Job expired = new Plan.Job(slot, LocalDate.now(Plan.ZONE).plusDays(3), 4);
+      check(s.claim(account, expired, null), "synthetic expired attempt recorded");
+      s.finish(account, expired, "Requiere pago", "Synthetic expired result");
+      check(!s.retryAfterReview(expired.key()), "review rejects a retry after the deadline");
+      check(s.attempted(expired.key()) && s.history().stream().anyMatch(h ->
+          h[0].equals(expired.key()) && h[2].equals("Requiere pago")
+              && h[3].equals("Synthetic expired result")),
+          "expired review preserves the original result and duplicate protection");
       check(Scheduler.allowed(getTargetContext()), "exact alarm permission granted for test");
       s.enabled(true);
       Scheduler.refresh(getTargetContext());
@@ -108,6 +131,8 @@ public final class DeviceChecks extends Instrumentation {
       fixture.activity = "14";
       fixture.name = "Step-Training";
       s.catalogue(Collections.singletonList(fixture));
+      s.claim(s.account(), expired, null);
+      s.finish(s.account(), expired, "No reservada", "Synthetic expired UI result");
       Intent launch =
           new Intent(getTargetContext(), MainActivity.class)
               .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
@@ -122,6 +147,13 @@ public final class DeviceChecks extends Instrumentation {
       check(
           find(screen.getWindow().getDecorView(), "Próximos intentos") != null,
           "history tab opens without credentials");
+      check(find(screen.getWindow().getDecorView(),
+          "El margen de reintento de 90 segundos desde la apertura ya ha pasado."
+              + " Este resultado se conserva. Comprueba la plaza o la lista de espera en la web.")
+          != null, "expired history explains why another attempt cannot run");
+      check(find(screen.getWindow().getDecorView(),
+          "He revisado la web: permitir otro intento") == null,
+          "expired result does not offer the destructive old retry action");
       runOnMainSync(() -> find(screen.getWindow().getDecorView(), "Mi semana").performClick());
       check(
           find(screen.getWindow().getDecorView(), "Todas las semanas") != null

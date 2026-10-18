@@ -75,6 +75,26 @@ public final class CoreTests {
             .get(0)
             .open,
         "payment blocks automation");
+    for (String amount : Arrays.asList("0,00 €", "0.00 EUR", "0\u00a0€", "0,00\u202f€")) {
+      ClubClient.Session free = ClubClient.parse(
+          Jsoup.parse(html.replace("id=\"Clase_947\"", "data-importe=\"" + amount
+              + "\" id=\"Clase_947\"")), today).get(0);
+      check(free.open && !free.paid, "formatted zero is free: " + amount);
+    }
+    ClubClient.Session cost = ClubClient.parse(
+        Jsoup.parse(html.replace("id=\"Clase_947\"", "data-importe=\"3,50 €\" id=\"Clase_947\"")),
+        today).get(0);
+    check(cost.paid && !cost.open, "nonzero currency amount blocks booking");
+    ClubClient.Session unknown = ClubClient.parse(
+        Jsoup.parse(html.replace("id=\"Clase_947\"", "data-importe=\"consultar\" id=\"Clase_947\"")),
+        today).get(0);
+    check(!unknown.open && !unknown.paid && unknown.status.equals("Importe no reconocido"),
+        "unknown price blocks booking without asserting a payment is due");
+    ClubClient.Session unpaid = ClubClient.parse(
+        Jsoup.parse(html.replace("Clase__Clicable", "Clase__Inscrito reserva__sinpagar Clase__Clicable")
+            .replace("id=\"Clase_947\"", "data-idlinea=\"12\" id=\"Clase_947\"")), today).get(0);
+    check(unpaid.paid && !unpaid.booked && !unpaid.open,
+        "unpaid inscription is never a confirmed booking");
     check(
         !ClubClient.parse(Jsoup.parse(html.replace("R=947", "R=948")), today).get(0).open,
         "URL must match session ID");
@@ -215,6 +235,14 @@ public final class CoreTests {
     check(
         !early.release.equals(late.release),
         "different session hours have different release times");
+    check(Plan.retryAllowed(late.key(), 4, late.release.plusSeconds(89)),
+        "reviewed retry allowed before the original deadline");
+    check(!Plan.retryAllowed(late.key(), 4, late.release.plusSeconds(90)),
+        "reviewed retry rejected at the deadline");
+    check(!Plan.retryAllowed(late.key(), 4, late.release.plusSeconds(600)),
+        "reviewed retry never revives a missed opening");
+    check(!Plan.retryAllowed("invalid-job", 4, now), "malformed retry key rejected");
+    check(!Plan.retryAllowed(late.key(), 99, now), "invalid retry timing rejected");
     System.out.println("RESULT: " + count + " passed; 0 failed. No live bookings sent.");
   }
 }

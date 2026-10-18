@@ -4,7 +4,7 @@ Aplicación nativa independiente para programar reservas en [Cantolagua](https:/
 
 ## Instalar y empezar
 
-1. Descarga `artifacts/MiCantolagua-1.0.2.apk` en el móvil y ábrelo. Si ya usas una versión anterior, instala la actualización encima, sin desinstalar: conserva tu cuenta y horarios. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
+1. Descarga `artifacts/MiCantolagua-1.0.4.apk` en el móvil y ábrelo. Si ya usas una versión anterior, instala la actualización encima, sin desinstalar: conserva tu cuenta y horarios. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
 2. Abre **Mi semana**: el calendario público se carga automáticamente, sin necesitar una cuenta. Verás el número de sesiones descargadas o un error de conexión concreto. Para reservar, conecta después tu cuenta en **Ajustes → Guardar y comprobar acceso**. La verificación no realiza reservas.
 3. La regla confirmada ya está configurada: **4 días naturales antes, a la misma hora de la sesión**, hora de Madrid. Por ejemplo, lunes 17:30 → jueves anterior 17:30; martes 18:30 → viernes anterior 18:30. Cada actividad tiene su apertura propia. La antelación se puede cambiar en Ajustes si el centro modifica la regla.
 4. Permite **Alarmas y recordatorios** y **Notificaciones**. En los ajustes de batería del teléfono permite el funcionamiento sin restricciones para Mi Cantolagua. Si el fabricante tiene un ajuste de inicio automático, actívalo.
@@ -33,10 +33,13 @@ Este sistema evita un servidor permanente, pero el teléfono, la red y el centro
 
 - **Reservada**: la respuesta identifica la sesión solicitada o una consulta posterior confirma que la cuenta está inscrita.
 - **Ya reservada**: el calendario ya mostraba la inscripción; no se toca el enlace de cancelación.
-- **Completa**, **En lista de espera**, **Requiere pago**: se registra el estado y no se realiza una reserva directa.
+- **Completa**, **En lista de espera**, **Requiere pago**: se registra el estado y no se realiza una reserva directa. El historial incluye el importe recibido o indica si existe una inscripción pendiente de pago.
+- **Importe no reconocido**: la web ha enviado un formato de precio que la app no puede interpretar; se detiene la reserva y se pide comprobarlo. No se afirma que haya un pago pendiente.
 - **Comprobar en la web**: la solicitud pudo llegar al centro, pero no se pudo confirmar el resultado. Se bloquea la repetición automática. Abre la web y comprueba tu cuenta antes de permitir otro intento.
 
 La app no cancela reservas, paga actividades ni se apunta automáticamente a listas de espera. Estos casos se gestionan en la web. Pausar impide solicitudes futuras; una solicitud ya enviada puede terminar en el servidor.
+
+**He revisado la web: permitir otro intento** conserva una entrada visible con «Reintento pendiente». Solo permite preparar otro envío si sigue vigente el margen original de 90 segundos y la reserva no está confirmada. Al vencer ese plazo se conserva el resultado y se explica que debe comprobarse la web; no se borra la fila ni se recupera una apertura pasada. El botón de versiones hasta la 1.0.3 podía borrar el resultado aunque no quedase tiempo para otro intento. La 1.0.4 corrige este fallo; no recupera resultados borrados anteriormente.
 
 El historial corresponde a los intentos realizados por esta instalación; no es una importación del historial completo de la web. Puedes probar la conexión sin reservar desde Ajustes. Una contraseña modificada en la web debe guardarse de nuevo en la app.
 
@@ -57,7 +60,7 @@ bash scripts/test.sh
 bash scripts/build_android.sh
 ```
 
-`CANTOLAGUA_TOOLS` permite cambiar la carpeta de herramientas (por defecto `/workspace/.tools`). El APK se genera en `artifacts/MiCantolagua-1.0.2.apk`, junto con su SHA-256. La compilación verifica la firma del APK. Es una compilación de distribución, sin `debuggable` y con componentes internos no exportados.
+`CANTOLAGUA_TOOLS` permite cambiar la carpeta de herramientas (por defecto `/workspace/.tools`). El APK se genera en `artifacts/MiCantolagua-1.0.4.apk`, junto con su SHA-256. La compilación verifica la firma del APK. Es una compilación de distribución, sin `debuggable` y con componentes internos no exportados.
 
 La firma se conserva fuera del repositorio en `/workspace/.cantolagua-android-signing`, o en `CANTOLAGUA_SIGNING_DIR`. **Guarda una copia privada de esta carpeta para firmar futuras actualizaciones**. No la subas al repositorio. Una instalación nueva que genere otra firma no podrá actualizar el APK instalado; habrá que desinstalar antes, perdiendo los datos locales.
 
@@ -79,3 +82,7 @@ Al reiniciar el teléfono o actualizar la aplicación, el receptor del sistema �
 ### Descarga del calendario completo
 
 La web devuelve una vista móvil de un solo día cuando el identificador HTTP contiene `Android`. Esto explicaba por qué las versiones anteriores solo recibían las siete sesiones del lunes, mientras un navegador de ordenador veía 26 hasta el jueves. La 1.0.2 solicita la vista completa con el identificador de la app sin ese indicador móvil. Si la web aun así devuelve pestañas de días, consulta exclusivamente sus enlaces de calendario y reúne las sesiones publicadas. Esta lógica se aplica tanto al calendario público como al autenticado utilizado para reservar. Las pruebas incluyen las respuestas móviles reales de los cuatro días y verifican que jamás se siga un enlace de reserva o cancelación durante una lectura.
+
+### Importes del calendario (1.0.3)
+
+La app interpreta también importes con moneda y espacios, como `0,00 €`, `0.00 EUR` y espacios no separables. Las versiones anteriores los trataban erróneamente como importes positivos. Un cero permite la reserva directa si se cumplen las demás condiciones. Un importe positivo o una inscripción marcada como pendiente de pago detiene la automatización; una inscripción pendiente de pago no se considera confirmada. Un formato desconocido se registra expresamente para comprobarlo en la web. Esta corrección reproduce un fallo del parser; no identifica por sí sola el importe que devolvió la cuenta en un intento anterior.

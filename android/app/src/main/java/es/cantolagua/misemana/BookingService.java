@@ -97,13 +97,14 @@ public final class BookingService extends Service {
             if (session.booked
                 || session.waitlisted
                 || session.status.equals("Completa")
+                || session.status.equals("Importe no reconocido")
                 || session.paid) {
               if (store.claim(account, job, null)) {
                 store.finish(
                     account,
                     job,
                     session.status,
-                    "Estado consultado en Cantolagua. No se ha enviado una reserva");
+                    session.detail);
                 Notices.result(this, session.status, job.label());
               }
               iterator.remove();

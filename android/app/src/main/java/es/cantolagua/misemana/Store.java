@@ -14,6 +14,7 @@ import org.json.*;
 
 public final class Store extends SQLiteOpenHelper {
   public static final Object LOCK = new Object();
+  public static final String RETRY_READY = "Reintento pendiente";
   private final SharedPreferences prefs;
 
   public Store(Context c) {
@@ -253,8 +254,8 @@ public final class Store extends SQLiteOpenHelper {
     try (Cursor c =
         getReadableDatabase()
             .rawQuery(
-                "SELECT 1 FROM attempts WHERE account=? AND job=?",
-                new String[] {account(), job})) {
+                "SELECT 1 FROM attempts WHERE account=? AND job=? AND state<>?",
+                new String[] {account(), job, RETRY_READY})) {
       return c.moveToFirst();
     }
   }
@@ -264,13 +265,18 @@ public final class Store extends SQLiteOpenHelper {
     v.put("account", acct);
     v.put("job", job.key());
     if (session != null) v.put("session", session);
+    else v.putNull("session");
     v.put("label", job.label());
     v.put("state", "Comprobar en la web");
     v.put(
         "detail",
         "Solicitud iniciada; si no aparece un resultado, verifica la web antes de repetir");
     v.put("stamp", System.currentTimeMillis());
-    return getWritableDatabase()
+    SQLiteDatabase db = getWritableDatabase();
+    if (db.updateWithOnConflict("attempts", v, "account=? AND job=? AND state=?",
+            new String[] {acct, job.key(), RETRY_READY}, SQLiteDatabase.CONFLICT_IGNORE) == 1)
+      return true;
+    return db
             .insertWithOnConflict("attempts", null, v, SQLiteDatabase.CONFLICT_IGNORE)
         != -1;
   }
@@ -301,10 +307,17 @@ public final class Store extends SQLiteOpenHelper {
     return out;
   }
 
-  public void retryAfterReview(String job) {
+  public boolean retryAfterReview(String job) {
     synchronized (LOCK) {
-      getWritableDatabase()
-          .delete("attempts", "account=? AND job=?", new String[] {account(), job});
+      if (!Plan.retryAllowed(job, lead(), Instant.now())) return false;
+      ContentValues v = new ContentValues();
+      v.put("state", RETRY_READY);
+      v.put("detail", "Has autorizado otro intento tras revisar la web. Aún no se ha enviado"
+          + " otra solicitud; necesita las reservas activadas y el margen de apertura vigente");
+      v.put("stamp", System.currentTimeMillis());
+      return getWritableDatabase().update("attempts", v,
+          "account=? AND job=? AND state NOT IN (?,?)",
+          new String[] {account(), job, "Reservada", "Ya reservada"}) == 1;
     }
   }
 
