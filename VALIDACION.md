@@ -1,40 +1,33 @@
-# Validación de la entrega 1.0.5
+# Validación de la entrega 1.0.6
 
-Fecha: 22 de octubre de 2026. Paquete `es.cantolagua.misemana`, versionCode 6; Android 8/API 26 o posterior, destino API 35.
+Fecha: 22 de octubre de 2026. Paquete `es.cantolagua.misemana`, versionCode 7; Android 8/API 26 o posterior, destino API 35.
 
-## Problemas encontrados
+## Corrección del selector
 
-1. El texto **Incluida en Abono Actividades**, mostrado por Cantolagua como importe de una clase incluida, no se reconocía. En 1.0.4 se consideraba un importe desconocido y bloqueaba el envío. Se ejecutó la nueva prueba contra el código anterior del commit `2506386`: falló precisamente con ese texto. La 1.0.5 reconoce el valor exacto sin aceptar indiscriminadamente cualquier texto como gratuito.
-2. El planificador eliminaba una sesión 90 segundos después de su apertura, aunque la clase no hubiese empezado y todavía quedasen plazas. Se conserva ahora hasta su inicio. La alarma tardía tiene su propia ventana acotada de consulta y puede recuperar el intento. Se mantiene la regla de cuatro días naturales a la misma hora de Madrid, incluido el cambio de hora del lunes 26/10.
-3. La última activación comunicada por el usuario era de la noche anterior. No se dispone de evidencia suficiente para determinar por qué Android no arrancó el servicio a la hora prevista en ese teléfono. Se registran ahora por separado programación, recepción de alarma, inicio del servicio y último paso. No se afirma haber corregido una restricción concreta de ese fabricante.
+La web pública ya mostraba Fitball del lunes 26 a las 16:30, pero publicaba la tarjeta futura sin enlace y sin `data-fecha`. El lector anterior exigía ambos datos y la omitía. Se conserva ahora el nombre y la hora reales de estas tarjetas; la fecha se obtiene del encabezado validado de su columna o del día seleccionado en la vista móvil. No se utiliza la hora de la fila, que puede diferir de la sesión (por ejemplo, Step-Training del martes a las 09:20).
 
-Se verificó en el JavaScript público que el botón **Reservar plaza** utiliza el enlace de la clase con `a=d`. El diálogo se construye localmente en el navegador; no requiere una segunda petición previa de reserva.
+El encabezado debe concordar con el día de la semana y el número de día dentro del calendario próximo. Se rechazan columnas combinadas, fechas incoherentes y tarjetas sin contexto de día. Las tarjetas futuras se ofrecen para configurar el plan, pero siguen sin poder enviar una reserva. A la apertura, el flujo autenticado vuelve a consultar la sesión y exige el enlace válido, la fecha, la hora, la actividad y el importe incluido. No se modifica el envío ni se adelanta la reserva.
 
-## Confirmación y duplicados
+Se actualiza la versión del catálogo local para descargar de nuevo el calendario tras instalar la actualización, conservando cuenta, plantilla e historial. Sigue aplicándose la apertura cuatro días naturales antes a la misma hora de Madrid, incluido el cambio de hora.
 
-El cliente verifica la inscripción mediante otra consulta autenticada tras enviar la reserva. También consulta si la respuesta se pierde, sin reenviar. Un justificante específico puede servir de confirmación si la lectura posterior no está disponible; una contradicción explícita con el calendario requiere revisión. La inscripción pendiente de pago no cuenta como plaza confirmada.
+## Evidencia y alcance
 
-La recuperación de una apertura no vuelve a enviar solicitudes que ya tienen un resultado registrado o incierto. El reintento revisado conserva la fila y requiere que la clase no haya empezado. La lista de espera sigue sin activarse automáticamente: la operación del cliente añadida para diagnósticos puntuales exige selección explícita y verifica su resultado.
+- **119 comprobaciones JVM correctas:** 55 generales, 19 de horario, 16 de descarga, 16 de reserva/verificación y 13 nuevas sobre tarjetas futuras. La nueva muestra procede de una consulta pública real del 22/10; incluye Fitball del lunes 26 a las 16:30 y del miércoles 28 a las 17:30. Se prueban también la vista móvil, las actividades paralelas, el cambio de año y el rechazo de mutaciones desde una tarjeta futura.
+- La nueva prueba ejecutada contra el código de la 1.0.5 falla en la primera comprobación: falta Fitball del lunes a las 16:30. El fallo esperado se conserva en `artifacts/comprobaciones-regresion-1.0.6.txt`.
+- La APK de instrumentación compiló correctamente. No se completó su ejecución en esta entrega: el emulador local sin KVM no respondió al enlace ADB tras más de nueve minutos de arranque. No se cuentan como pasadas las pruebas visuales nuevas ni se atribuyen a esta versión las ejecuciones anteriores. Se conserva el intento en `artifacts/comprobaciones-emulador-1.0.6.txt`. Los resultados JVM se guardan en `artifacts/comprobaciones-jvm-1.0.6.txt`.
+- APK de distribución con firma v2/v3 y la misma identidad de firma; versionCode 7. SHA-256 adjunto. Sin credenciales, código de instrumentación ni CA de pruebas.
+- En esta entrega solo se consultó el calendario público real: no se enviaron reservas ni inscripciones en listas de espera. Las pruebas simuladas no garantizan conseguir plaza frente a otros usuarios.
 
-## Resultados
-
-- **106 comprobaciones JVM correctas:** 55 generales, 19 de horario, 16 de descarga y 16 del flujo autenticado con transporte simulado. Cubren el texto de abono, Pilates del lunes a las 09:00 después de la antigua ventana, desfase de verano/invierno, verificación posterior, respuesta perdida, contradicciones, destino/persona correctos e inscripción explícita en espera sin duplicados.
-- **13 comprobaciones del flujo completo en Android 15 correctas:** alarma exacta con la interfaz cerrada, recepción registrada, inicio de sesión, una sola solicitud, verificación autenticada, historial, notificación de plaza, recuperación tras perder la respuesta y fallo de login sin enviar. Transporte HTTP simulado, sin solicitudes reales al centro.
-- **34 comprobaciones generales en Android 15 correctas:** Keystore, persistencia, duplicados, reintentos, permisos, diagnóstico de programación, alarma en segundo plano y pantallas.
-- APK de distribución firmado con la misma clave y sin credenciales. Firma v2/v3, alineación y SHA-256 comprobados. No se incluye la CA de pruebas en el APK.
-- Se realizó una comprobación autenticada real con la cuenta autorizada. La sesión consultada estaba completa y no se envió una solicitud de plaza. Los resultados de acciones personales autorizadas se conservan de forma privada, fuera del repositorio. No se afirma haber probado una nueva reserva real de plaza disponible.
-
-Los resultados de instrumentación y JVM se incluyen en `artifacts/comprobaciones-*-1.0.5.txt`; la reproducción del defecto anterior se incluye como fallo esperado. Las comprobaciones de red y selectores de otras entregas no se cuentan como ejecuciones nuevas.
+La configuración de batería del teléfono se da por comprobada por el usuario. Esta corrección resuelve la ausencia de actividades en el selector; no atribuye ni da por resuelta la causa de una alarma que no se reciba en el teléfono. En una máquina virtual, Android y el equipo anfitrión deben permanecer encendidos, con red y sin suspensión. Consultar **Reservas → Funcionamiento en segundo plano** para distinguir alarma programada, recibida y resultado del servicio.
 
 ## Repetición
 
 ```sh
-python3 scripts/bootstrap_android.py
 bash scripts/test.sh
 bash scripts/build_android.sh
 bash scripts/build_device_tests.sh
 ```
 
-La instrumentación `BookingFlowChecks` y `DeviceChecks` se ejecuta solo en un emulador aislado: borra sus datos y utiliza credenciales ficticias. Las pruebas reales no forman parte de esa suite. El emulador sin aceleración requiere tiempo de arranque y un watchdog ampliado en el sistema de pruebas; esa configuración no se incorpora a la app.
+`FutureCalendarChecks` abre los selectores reales, elige Fitball antes de su apertura y comprueba la persistencia del día, hora y actividad. `BookingFlowChecks` comprueba el flujo completo de alarma, login, envío único, verificación, historial y notificación mediante transporte simulado. Solo deben ejecutarse en un emulador aislado: borran los datos de la app de prueba.
 
-El fallo concreto del arranque en el teléfono real sigue necesitando revisar sus permisos y batería; los nuevos indicadores permiten localizarlo si se repite.
+La validación de la versión anterior se conserva en `VALIDACION-1.0.5.md`; sus ejecuciones no se cuentan como nuevas.

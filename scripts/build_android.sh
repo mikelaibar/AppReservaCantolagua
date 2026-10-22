@@ -12,7 +12,7 @@ mkdir -p "$BUILD/gen" "$BUILD/classes" "$BUILD/dex" "$TASK_ROOT/artifacts"
 rm -rf "$BUILD/classes" "$BUILD/dex" "$BUILD/gen"
 mkdir -p "$BUILD/gen" "$BUILD/classes" "$BUILD/dex"
 "$BT/aapt2" compile --dir "$SRC/res" -o "$BUILD/resources.zip"
-"$BT/aapt2" link -I "$SDK/platforms/android-35/android.jar" --manifest "$SRC/AndroidManifest.xml" --java "$BUILD/gen" -o "$BUILD/resources.apk" --min-sdk-version 26 --target-sdk-version 35 --version-code 6 --version-name 1.0.5 -A "$SRC/assets" "$BUILD/resources.zip"
+"$BT/aapt2" link -I "$SDK/platforms/android-35/android.jar" --manifest "$SRC/AndroidManifest.xml" --java "$BUILD/gen" -o "$BUILD/resources.apk" --min-sdk-version 26 --target-sdk-version 35 --version-code 7 --version-name 1.0.6 -A "$SRC/assets" "$BUILD/resources.zip"
 find "$SRC/java" "$BUILD/gen" -name '*.java' > "$BUILD/sources.txt"
 java -m jdk.compiler/com.sun.tools.javac.Main -source 8 -target 8 -Xlint:-options -bootclasspath "$SDK/platforms/android-35/android.jar:$BT/core-lambda-stubs.jar" -classpath "$TASK_TOOLS/jsoup.jar" -d "$BUILD/classes" @"$BUILD/sources.txt"
 java -m jdk.jartool/sun.tools.jar.Main cf "$BUILD/classes.jar" -C "$BUILD/classes" .
@@ -33,9 +33,9 @@ pathlib.Path(sys.argv[1]).write_text(secrets.token_urlsafe(36))
 PY
     keytool -genkeypair -noprompt -keystore "$SIGNING/release.p12" -storetype PKCS12 -alias cantolagua -keyalg RSA -keysize 3072 -validity 10000 -storepass:file "$SIGNING/password" -keypass:file "$SIGNING/password" -dname 'CN=Mi Cantolagua, O=AppReservaCantolagua, C=ES'
 fi
-APK="$TASK_ROOT/artifacts/MiCantolagua-1.0.5.apk"
+APK="$TASK_ROOT/artifacts/MiCantolagua-1.0.6.apk"
 "$BT/apksigner" sign --ks "$SIGNING/release.p12" --ks-key-alias cantolagua --ks-pass "file:$SIGNING/password" --out "$APK" "$BUILD/aligned.apk"
 "$BT/apksigner" verify --verbose "$APK"
 chmod 644 "$APK"
-(cd "$TASK_ROOT/artifacts" && sha256sum MiCantolagua-1.0.5.apk > MiCantolagua-1.0.5.apk.sha256)
+(cd "$TASK_ROOT/artifacts" && sha256sum MiCantolagua-1.0.6.apk > MiCantolagua-1.0.6.apk.sha256)
 echo "APK generado: $APK"

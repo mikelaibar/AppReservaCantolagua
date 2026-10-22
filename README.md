@@ -4,7 +4,7 @@ Aplicación nativa independiente para programar reservas en [Cantolagua](https:/
 
 ## Instalar y empezar
 
-1. Descarga `artifacts/MiCantolagua-1.0.5.apk` en el móvil y ábrelo. Si ya usas una versión anterior, instala la actualización encima, sin desinstalar: conserva tu cuenta y horarios. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
+1. Descarga `artifacts/MiCantolagua-1.0.6.apk` en el móvil y ábrelo. Si ya usas una versión anterior, instala la actualización encima, sin desinstalar: conserva tu cuenta y horarios. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
 2. Abre **Mi semana**: el calendario público se carga automáticamente, sin necesitar una cuenta. Verás el número de sesiones descargadas o un error de conexión concreto. Para reservar, conecta después tu cuenta en **Ajustes → Guardar y comprobar acceso**. La verificación no realiza reservas.
 3. La regla confirmada ya está configurada: **4 días naturales antes, a la misma hora de la sesión**, hora de Madrid. Por ejemplo, lunes 17:30 → jueves anterior 17:30; martes 18:30 → viernes anterior 18:30. Cada actividad tiene su apertura propia. La antelación se puede cambiar en Ajustes si el centro modifica la regla.
 4. Permite **Alarmas y recordatorios** y **Notificaciones**. En los ajustes de batería del teléfono permite el funcionamiento sin restricciones para Mi Cantolagua. Si el fabricante tiene un ajuste de inicio automático, actívalo.
@@ -12,6 +12,8 @@ Aplicación nativa independiente para programar reservas en [Cantolagua](https:/
 6. Activa **Reservar por mí**. Comprueba la próxima apertura en la pantalla principal o en **Reservas**. Si una apertura ya ha pasado, se recuperan las clases elegidas que todavía no hayan empezado y no tengan un envío previo pendiente de comprobar.
 
 Al pulsar **+ Añadir actividad**, primero se ofrecen las horas con el nombre guardado para ese día de la semana. Por ejemplo, martes **09:20 · Step-Training**; no se copia el Pilates del lunes. Si hay dos actividades a la misma hora, puedes elegir entre ambas.
+
+Las tarjetas futuras que Cantolagua publica sin enlace de reserva también se ofrecen en el selector. La fecha se valida contra el encabezado del día y la hora se lee de la propia tarjeta. Así puedes elegir, por ejemplo, Fitball del lunes a las 16:30 antes de su apertura. La reserva espera a su hora y exige que el calendario autenticado publique el enlace válido.
 
 La app conserva un horario consultado, independiente del historial de reservas: guarda día, hora, actividad y fecha de la sesión observada. Una consulta parcial de una semana nueva no borra los demás días. Los nombres se reutilizan de una semana a otra; una publicación más reciente actualiza esa combinación de día y hora. El servicio también aprende de los calendarios que consulta al reservar.
 
@@ -26,6 +28,8 @@ Siempre se ofrecen horas, incluso cuando todavía no hay un nombre guardado. En 
 Una alarma exacta de Android activa un servicio visible mediante una notificación aproximadamente un minuto antes de la apertura. Se inicia sesión, se espera hasta la hora de apertura y se consulta la disponibilidad para enviar una única solicitud por sesión. Si hay varias clases para la misma apertura, se procesan juntas; una clase sin publicar no bloquea las demás. Cada activación consulta durante un máximo de 90 segundos desde que puede empezar a reservar. Si Android entrega tarde la alarma, el servicio hace esa comprobación igualmente: no descarta una sesión por haber pasado más de 90 segundos desde su apertura. Las solicitudes enviadas no se repiten automáticamente y las clases que ya han comenzado se excluyen.
 
 La app puede quitarse de las aplicaciones recientes. **Forzar detención**, apagar el móvil, retirar los permisos o las restricciones del fabricante pueden impedir la alarma. Después de reiniciar, desbloquea el teléfono al menos una vez. Se necesita Internet al abrirse las reservas. El modo de espera de bajo consumo de Android puede cortar la conexión incluso con un servicio activo; la app avisa si detecta ese modo.
+
+En un emulador o máquina virtual, tanto Android como el ordenador que lo aloja deben permanecer encendidos, conectados y sin suspensión. Comprueba la zona horaria de Madrid y los permisos de alarma y notificaciones en ese Android.
 
 Este sistema evita un servidor permanente, pero el teléfono, la red y el centro pueden retrasar o impedir una solicitud. No garantiza plaza ni precisión de milisegundos. GitHub Actions tampoco ofrece un horario puntual adecuado para competir por plazas a una hora concreta.
 
@@ -60,7 +64,7 @@ bash scripts/test.sh
 bash scripts/build_android.sh
 ```
 
-`CANTOLAGUA_TOOLS` permite cambiar la carpeta de herramientas (por defecto `/workspace/.tools`). El APK se genera en `artifacts/MiCantolagua-1.0.5.apk`, junto con su SHA-256. La compilación verifica la firma del APK. Es una compilación de distribución, sin `debuggable` y con componentes internos no exportados.
+`CANTOLAGUA_TOOLS` permite cambiar la carpeta de herramientas (por defecto `/workspace/.tools`). El APK se genera en `artifacts/MiCantolagua-1.0.6.apk`, junto con su SHA-256. La compilación verifica la firma del APK. Es una compilación de distribución, sin `debuggable` y con componentes internos no exportados.
 
 La firma se conserva fuera del repositorio en `/workspace/.cantolagua-android-signing`, o en `CANTOLAGUA_SIGNING_DIR`. **Guarda una copia privada de esta carpeta para firmar futuras actualizaciones**. No la subas al repositorio. Una instalación nueva que genere otra firma no podrá actualizar el APK instalado; habrá que desinstalar antes, perdiendo los datos locales.
 

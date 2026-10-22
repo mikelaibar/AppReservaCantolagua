@@ -1,0 +1,3 @@
+Exception in thread "main" java.lang.AssertionError: reported Fitball Monday 26 at 16:30 is read before reservations open
+	at es.cantolagua.misemana.FutureTimetableTests.check(FutureTimetableTests.java:11)
+	at es.cantolagua.misemana.FutureTimetableTests.main(FutureTimetableTests.java:23)

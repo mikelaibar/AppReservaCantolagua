@@ -12,7 +12,7 @@ if [ -n "${CANTOLAGUA_TEST_CA_FILE:-}" ]; then
     cp "$CANTOLAGUA_TEST_CA_FILE" "$BUILD/assets/runtime-proxy-ca.crt"
 fi
 
-java -m jdk.compiler/com.sun.tools.javac.Main -source 8 -target 8 -Xlint:-options -bootclasspath "$SDK/platforms/android-35/android.jar:$BT/core-lambda-stubs.jar" -cp "$TASK_ROOT/android/build/classes:$TASK_TOOLS/jsoup.jar" -d "$BUILD/classes" "$TASK_ROOT/tests/DeviceChecks.java" "$TASK_ROOT/tests/CalendarDeviceChecks.java" "$TASK_ROOT/tests/UpgradeSeed.java" "$TASK_ROOT/tests/NetworkDeviceChecks.java" "$TASK_ROOT/tests/BookingFlowChecks.java"
+java -m jdk.compiler/com.sun.tools.javac.Main -source 8 -target 8 -Xlint:-options -bootclasspath "$SDK/platforms/android-35/android.jar:$BT/core-lambda-stubs.jar" -cp "$TASK_ROOT/android/build/classes:$TASK_TOOLS/jsoup.jar" -d "$BUILD/classes" "$TASK_ROOT/tests/DeviceChecks.java" "$TASK_ROOT/tests/CalendarDeviceChecks.java" "$TASK_ROOT/tests/UpgradeSeed.java" "$TASK_ROOT/tests/NetworkDeviceChecks.java" "$TASK_ROOT/tests/BookingFlowChecks.java" "$TASK_ROOT/tests/FutureCalendarChecks.java"
 java -m jdk.jartool/sun.tools.jar.Main cf "$BUILD/tests.jar" -C "$BUILD/classes" .
 java -cp "$BT/lib/d8.jar" com.android.tools.r8.D8 --lib "$SDK/platforms/android-35/android.jar" --classpath "$TASK_ROOT/android/build/classes.jar" --min-api 26 --output "$BUILD/dex" "$BUILD/tests.jar"
 "$BT/aapt2" link -I "$SDK/platforms/android-35/android.jar" --manifest "$TASK_ROOT/tests/AndroidManifest.xml" -o "$BUILD/unsigned.apk" --min-sdk-version 26 --target-sdk-version 35 -A "$BUILD/assets"

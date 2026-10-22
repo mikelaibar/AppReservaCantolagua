@@ -18,7 +18,7 @@ public final class ClubClient {
       PAGE = BASE + "/reservas/actividades.aspx";
   private final CookieManager cookies =
       new CookieManager(null, CookiePolicy.ACCEPT_ORIGINAL_SERVER);
-  static final String USER_AGENT = "MiCantolagua/1.0.5";
+  static final String USER_AGENT = "MiCantolagua/1.0.6";
   private final Transport transport;
   private final LocalDate testDate;
 
@@ -264,11 +264,17 @@ public final class ClubClient {
         if (!person.matches("[0-9]+")) throw new Problem("Selecciona tu persona en la web");
       }
     }
+    Map<Element, Map<Integer, LocalDate>> columns = new HashMap<>();
+    for (Element table : d.select("#cuadricula table.Clases"))
+      columns.put(table, calendarColumns(table, today));
+    LocalDate mobileDay = mobileDay(d, today);
     List<Session> out = new ArrayList<>();
     for (Element e : d.select(".Clases_Clase")) {
       if (!e.id().matches("Clase_[0-9]+")) continue;
+      Element activity = e.selectFirst(".Clase_Actividad");
       Element a = e.selectFirst(".Clase_Actividad a"), clock = e.selectFirst(".hinicio_clase");
-      if (a == null || clock == null) continue;
+      boolean preview = e.hasClass("Clase__Futura");
+      if (activity == null || clock == null || (a == null && !preview)) continue;
       Session s = new Session();
       s.id = e.id().substring(6);
       for (String cls : e.classNames()) {
@@ -279,10 +285,20 @@ public final class ClubClient {
         }
       }
       if (s.activity == null) continue;
-      s.name = a.text();
-      s.href = a.attr("href");
+      s.name = a == null ? activity.text() : a.text();
+      if (s.name.isEmpty()) continue;
+      s.href = a == null ? "" : a.attr("href");
       s.time = LocalTime.parse(clock.text().trim().replaceFirst("^(\\d):", "0$1:")).toString();
-      s.date = sessionDate(e.attr("data-fecha"), today);
+      if (!preview || !e.attr("data-fecha").trim().isEmpty())
+        s.date = sessionDate(e.attr("data-fecha"), today);
+      else if (preview) {
+        Element cell = e.closest("td"), table = e.closest("table.Clases");
+        if (cell != null && table != null) {
+          Map<Integer, LocalDate> days = columns.get(table);
+          if (days != null && !hasSpans(cell.parent())) s.date = days.get(cell.elementSiblingIndex());
+        } else if (e.closest(".Clases_HorarioDia") != null) s.date = mobileDay;
+      }
+      if (s.date == null) continue;
       s.person = person;
       s.room = e.select(".Clase_Sala").text();
       boolean pendingPayment = e.hasClass("reserva__sinpagar")
@@ -319,6 +335,62 @@ public final class ClubClient {
       out.add(s);
     }
     return out;
+  }
+
+  private static final Pattern HEADER = Pattern.compile(
+      "^(lun|mar|mie|jue|vie|sab|dom)\\.?\\s+(\\d{1,2})$", Pattern.CASE_INSENSITIVE);
+
+  private static boolean headerMatches(String label, LocalDate date) {
+    Matcher m = HEADER.matcher(label.toLowerCase(Locale.ROOT).replace('é', 'e').replace('á', 'a').trim());
+    return m.matches() && Integer.parseInt(m.group(2)) == date.getDayOfMonth()
+        && Arrays.asList("lun", "mar", "mie", "jue", "vie", "sab", "dom")
+            .indexOf(m.group(1)) + 1 == date.getDayOfWeek().getValue();
+  }
+
+  private static boolean hasSpans(Element row) {
+    for (Element cell : row.children())
+      if ((!cell.attr("colspan").isEmpty() && !cell.attr("colspan").equals("1"))
+          || (!cell.attr("rowspan").isEmpty() && !cell.attr("rowspan").equals("1"))) return true;
+    return false;
+  }
+
+  private static Map<Integer, LocalDate> calendarColumns(Element table, LocalDate today) {
+    Map<Integer, LocalDate> days = new HashMap<>();
+    Element row = table.selectFirst("thead tr");
+    if (row == null || hasSpans(row)) return days;
+    LocalDate last = null;
+    for (Element cell : row.children()) {
+      Element heading = cell.selectFirst(".Clases_Dia");
+      if (heading == null) continue;
+      LocalDate found = null;
+      // The displayed rolling week may cross a month/year. Require weekday AND day number.
+      for (int n = -7; n <= 14; n++) {
+        LocalDate candidate = today.plusDays(n);
+        if (headerMatches(heading.text(), candidate)) {
+          if (found != null) return Collections.emptyMap();
+          found = candidate;
+        }
+      }
+      if (found == null || (last != null && (!found.isAfter(last)
+          || ChronoUnit.DAYS.between(last, found) > 7))) return Collections.emptyMap();
+      days.put(cell.elementSiblingIndex(), found);
+      last = found;
+    }
+    return days;
+  }
+
+  private static LocalDate mobileDay(Document d, LocalDate today) throws Exception {
+    if (d.select(".Clases_HorarioDia").size() != 1) return null;
+    List<Element> active = d.select(".Clases_EncabezadoDia.Clases_DiaMostrado .Clases_Dia a[href]");
+    if (active.size() != 1) return null;
+    Element link = active.get(0);
+    URI uri = safe(link.attr("href"), false);
+    Map<String, String> q = query(uri);
+    if (!uri.getPath().equals("/reservas/actividades.aspx") || q.size() != 1 || !q.containsKey("dia"))
+      throw new Problem("Día seleccionado inesperado en el calendario");
+    LocalDate date = LocalDate.parse(q.get("dia"));
+    return Math.abs(ChronoUnit.DAYS.between(today, date)) <= 45
+        && headerMatches(link.text(), date) ? date : null;
   }
 
   // Calendar amounts are display strings (for example "0,00 €"), not raw numbers.

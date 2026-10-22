@@ -207,7 +207,7 @@ public final class Store extends SQLiteOpenHelper {
           prefs
               .edit()
               .putString("catalogue", Timetable.encode(history))
-              .putInt("catalogue_schema", 3)
+              .putInt("catalogue_schema", 4)
               .putInt("catalogue_count", sessions.size())
               .putString("catalogue_error", "")
               .putLong("catalogue_time", System.currentTimeMillis()));
@@ -223,7 +223,7 @@ public final class Store extends SQLiteOpenHelper {
   }
 
   public boolean currentCatalogue() {
-    return prefs.getInt("catalogue_schema", 0) >= 3;
+    return prefs.getInt("catalogue_schema", 0) >= 4;
   }
 
   public List<Plan.Slot> catalogue() {

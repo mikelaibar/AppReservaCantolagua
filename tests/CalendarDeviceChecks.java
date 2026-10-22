@@ -12,7 +12,7 @@ import java.util.*;
 import org.jsoup.Jsoup;
 
 /** Isolated emulator only. Exercises the actual weekday buttons and picker callbacks. */
-public final class CalendarDeviceChecks extends Instrumentation {
+public class CalendarDeviceChecks extends Instrumentation {
   int passed;
   boolean expectUpgrade;
   StringBuilder report = new StringBuilder();

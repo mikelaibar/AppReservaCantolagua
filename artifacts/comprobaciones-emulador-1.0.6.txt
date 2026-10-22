@@ -1,0 +1,4 @@
+Instrumentación compilada: FutureCalendarChecks y BookingFlowChecks.
+Ejecución no completada: el emulador Android 15 local, sin aceleración KVM, no respondió a ADB tras más de nueve minutos.
+El transporte devolvió TcpTimeoutException al conectar con 127.0.0.1:5555. No se llegaron a instalar/ejecutar las pruebas en el dispositivo.
+Las comprobaciones JVM de esta entrega sí terminaron: 119 correctas.
