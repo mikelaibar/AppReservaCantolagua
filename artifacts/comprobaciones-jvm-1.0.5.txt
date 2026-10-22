@@ -1,0 +1,110 @@
+PASS parse real calendar contract
+PASS exact date activity and time match
+PASS never substitutes a different activity
+PASS ambiguous room/session rejected
+PASS cancel URL never booked
+PASS full class never booked
+PASS future class never booked
+PASS payment blocks automation
+PASS formatted zero is free: 0,00 €
+PASS formatted zero is free: 0.00 EUR
+PASS formatted zero is free: 0 €
+PASS formatted zero is free: 0,00 €
+PASS formatted zero is free: Incluida en Abono Actividades
+PASS nonzero currency amount blocks booking
+PASS unknown price blocks booking without asserting a payment is due
+PASS unpaid inscription is never a confirmed booking
+PASS URL must match session ID
+PASS cross-host action rejected
+PASS read cannot follow booking URL
+PASS unencrypted action rejected
+PASS duplicate action parameters rejected
+PASS generic OK is not confirmation
+PASS receipt for other session is not confirmation
+PASS matching receipt confirms booking
+PASS payment receipt is not confirmed
+PASS year rollover resolved with weekday
+PASS stale or mismatched date rejected
+PASS Madrid summer offset
+PASS Madrid winter offset across DST
+PASS weekly plan repeats without copying app state
+PASS empty week override suppresses only that week
+PASS plan persists losslessly
+PASS missed opening stays eligible while the session has not started
+PASS duplicate selected slots deduplicated
+PASS unauthenticated catalogue rejected
+PASS network failure surfaced
+PASS mutation never retried on timeout
+PASS selected person preserved in reservation
+PASS login sends supplied fields
+PASS login verifies protected catalogue instead of home marker
+PASS distant isolated week still schedules an alarm
+PASS confirmed four-day same-hour rule for Lunes
+PASS confirmed four-day same-hour rule for Martes
+PASS confirmed four-day same-hour rule for Miércoles
+PASS confirmed four-day same-hour rule for Jueves
+PASS confirmed four-day same-hour rule for Viernes
+PASS different session hours have different release times
+PASS reviewed retry allowed before the original deadline
+PASS reviewed retry remains possible after the old deadline
+PASS reviewed retry can recover an opened session with a place
+PASS reviewed retry rejected when the class has started
+PASS reported Monday Pilates still eligible hours after Thursday opening
+PASS Monday after DST change opens Thursday at 09:00 Madrid, not 08:00
+PASS malformed retry key rejected
+PASS invalid retry timing rejected
+RESULT: 55 passed; 0 failed. No live bookings sent.
+PASS all sessions in the real four-day calendar retained
+PASS Monday morning is Pilates at 09:00
+PASS reported regression: Tuesday is Step-Training at 09:20
+PASS Monday Pilates never copied to Tuesday morning
+PASS Wednesday morning remains Movilidad
+PASS Thursday morning remains Step-Training
+PASS Tuesday uses the class clock instead of the table's 09:00 row
+PASS parallel activities at one time both retained
+PASS Tuesday evening remains assigned to Tuesday
+PASS day, time and activity survive persistence
+PASS a new week publishing only Monday preserves other weekdays
+PASS Friday reuses its own observed activity in following weeks
+PASS a newer observed class replaces that weekday/time only
+PASS older calendar cannot overwrite a newer observation
+PASS unpublished Friday never inherits Monday's activity
+PASS hours are offered even before an activity has been saved
+PASS version 1.0.0 catalogue migrates without losing times
+PASS every selectable option includes its hour
+PASS partially published weekday still offers the usual hours without an invented activity
+RESULT: 19 timetable tests passed; no web requests.
+PASS mobile day request is read-only
+PASS mobile day request is read-only
+PASS mobile day request is read-only
+PASS mobile day request is read-only
+PASS actual mobile responses produce all 26 sessions instead of only seven on Monday
+PASS selected Monday is not fetched a second time
+PASS mobile day tabs cover Monday through Thursday
+PASS mobile Tuesday includes Step-Training at 09:20
+PASS full calendar needs only one read
+PASS request identity avoids the site's one-day Android view
+PASS authenticated booking lookup also reads all published days
+PASS expired login on another day is not accepted as a complete catalogue
+PASS calendar never follows a cancellation URL disguised as a tab
+PASS unsafe tab is rejected before a network request
+PASS server ignoring the requested day is reported instead of silently retaining Monday only
+PASS a failed calendar download is an error, not an empty successful timetable
+RESULT: 16 catalogue fetch checks passed; no web requests.
+PASS Monday 26 Pilates 09:00 resolves the real session contract
+PASS login, direct request and fresh calendar confirm the place
+PASS one send and a separate post-booking verification
+PASS fresh calendar identifies the user's inscription
+PASS lost booking response recovered by reading the confirmed inscription
+PASS timeout recovery reads instead of sending again
+PASS lost response without inscription remains uncertain
+PASS uncertain result never triggers an automatic resend
+PASS success receipt contradicted by calendar requires user review
+PASS specific booking receipt remains evidence when follow-up read is unavailable
+PASS mismatched requested hour rejected before any mutation
+PASS explicit waitlist action is verified against the authenticated calendar
+PASS existing waiting-list inscription is never added twice
+PASS lost waitlist response is recovered by reading, without resend
+PASS uncertain waitlist request stays unconfirmed and is not replayed
+PASS waitlist action refuses a direct-booking link
+RESULT: 16 booking flow checks passed; simulated club only.

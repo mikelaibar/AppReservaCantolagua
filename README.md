@@ -4,12 +4,12 @@ Aplicación nativa independiente para programar reservas en [Cantolagua](https:/
 
 ## Instalar y empezar
 
-1. Descarga `artifacts/MiCantolagua-1.0.4.apk` en el móvil y ábrelo. Si ya usas una versión anterior, instala la actualización encima, sin desinstalar: conserva tu cuenta y horarios. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
+1. Descarga `artifacts/MiCantolagua-1.0.5.apk` en el móvil y ábrelo. Si ya usas una versión anterior, instala la actualización encima, sin desinstalar: conserva tu cuenta y horarios. Si Android lo solicita, permite instalar aplicaciones desde la aplicación con la que has descargado el archivo.
 2. Abre **Mi semana**: el calendario público se carga automáticamente, sin necesitar una cuenta. Verás el número de sesiones descargadas o un error de conexión concreto. Para reservar, conecta después tu cuenta en **Ajustes → Guardar y comprobar acceso**. La verificación no realiza reservas.
 3. La regla confirmada ya está configurada: **4 días naturales antes, a la misma hora de la sesión**, hora de Madrid. Por ejemplo, lunes 17:30 → jueves anterior 17:30; martes 18:30 → viernes anterior 18:30. Cada actividad tiene su apertura propia. La antelación se puede cambiar en Ajustes si el centro modifica la regla.
 4. Permite **Alarmas y recordatorios** y **Notificaciones**. En los ajustes de batería del teléfono permite el funcionamiento sin restricciones para Mi Cantolagua. Si el fabricante tiene un ajuste de inicio automático, actívalo.
 5. En **Mi semana**, añade las actividades de cada día a **Todas las semanas**. Esta es tu plantilla habitual y se repite indefinidamente. **Solo una semana** permite quitar o añadir clases en una semana concreta sin cambiar las siguientes. **Volver al horario habitual** elimina esa excepción.
-6. Activa **Reservar por mí**. Comprueba la próxima apertura en la pantalla principal o en **Reservas**. Los intentos cuyo plazo ya ha pasado no se ejecutan tarde.
+6. Activa **Reservar por mí**. Comprueba la próxima apertura en la pantalla principal o en **Reservas**. Si una apertura ya ha pasado, se recuperan las clases elegidas que todavía no hayan empezado y no tengan un envío previo pendiente de comprobar.
 
 Al pulsar **+ Añadir actividad**, primero se ofrecen las horas con el nombre guardado para ese día de la semana. Por ejemplo, martes **09:20 · Step-Training**; no se copia el Pilates del lunes. Si hay dos actividades a la misma hora, puedes elegir entre ambas.
 
@@ -23,7 +23,7 @@ Siempre se ofrecen horas, incluso cuando todavía no hay un nombre guardado. En 
 
 ## Funcionamiento con la app cerrada
 
-Una alarma exacta de Android activa un servicio visible mediante una notificación aproximadamente un minuto antes de la apertura. Se inicia sesión, se espera hasta la hora de apertura y se consulta la disponibilidad para enviar una única solicitud por sesión. Si hay varias clases para la misma apertura, se procesan juntas; una clase sin publicar no bloquea las demás. Se permite consultar durante un margen de hasta 90 segundos tras la apertura; las solicitudes enviadas no se repiten automáticamente.
+Una alarma exacta de Android activa un servicio visible mediante una notificación aproximadamente un minuto antes de la apertura. Se inicia sesión, se espera hasta la hora de apertura y se consulta la disponibilidad para enviar una única solicitud por sesión. Si hay varias clases para la misma apertura, se procesan juntas; una clase sin publicar no bloquea las demás. Cada activación consulta durante un máximo de 90 segundos desde que puede empezar a reservar. Si Android entrega tarde la alarma, el servicio hace esa comprobación igualmente: no descarta una sesión por haber pasado más de 90 segundos desde su apertura. Las solicitudes enviadas no se repiten automáticamente y las clases que ya han comenzado se excluyen.
 
 La app puede quitarse de las aplicaciones recientes. **Forzar detención**, apagar el móvil, retirar los permisos o las restricciones del fabricante pueden impedir la alarma. Después de reiniciar, desbloquea el teléfono al menos una vez. Se necesita Internet al abrirse las reservas. El modo de espera de bajo consumo de Android puede cortar la conexión incluso con un servicio activo; la app avisa si detecta ese modo.
 
@@ -39,7 +39,7 @@ Este sistema evita un servidor permanente, pero el teléfono, la red y el centro
 
 La app no cancela reservas, paga actividades ni se apunta automáticamente a listas de espera. Estos casos se gestionan en la web. Pausar impide solicitudes futuras; una solicitud ya enviada puede terminar en el servidor.
 
-**He revisado la web: permitir otro intento** conserva una entrada visible con «Reintento pendiente». Solo permite preparar otro envío si sigue vigente el margen original de 90 segundos y la reserva no está confirmada. Al vencer ese plazo se conserva el resultado y se explica que debe comprobarse la web; no se borra la fila ni se recupera una apertura pasada. El botón de versiones hasta la 1.0.3 podía borrar el resultado aunque no quedase tiempo para otro intento. La 1.0.4 corrige este fallo; no recupera resultados borrados anteriormente.
+**He revisado la web: permitir otro intento** conserva una entrada visible con «Reintento pendiente». Permite preparar otro envío si la sesión todavía no ha empezado y la reserva no está confirmada. Conserva el resultado al terminar la sesión; no borra la fila. Hasta la 1.0.4 solo permitía reintentar durante 90 segundos desde la apertura; la 1.0.5 permite recuperar una clase abierta con plazas, previa revisión del resultado anterior. El botón de versiones hasta la 1.0.3 podía borrar el resultado aunque no quedase tiempo para otro intento. La 1.0.4 corrige este fallo; no recupera resultados borrados anteriormente.
 
 El historial corresponde a los intentos realizados por esta instalación; no es una importación del historial completo de la web. Puedes probar la conexión sin reservar desde Ajustes. Una contraseña modificada en la web debe guardarse de nuevo en la app.
 
@@ -60,7 +60,7 @@ bash scripts/test.sh
 bash scripts/build_android.sh
 ```
 
-`CANTOLAGUA_TOOLS` permite cambiar la carpeta de herramientas (por defecto `/workspace/.tools`). El APK se genera en `artifacts/MiCantolagua-1.0.4.apk`, junto con su SHA-256. La compilación verifica la firma del APK. Es una compilación de distribución, sin `debuggable` y con componentes internos no exportados.
+`CANTOLAGUA_TOOLS` permite cambiar la carpeta de herramientas (por defecto `/workspace/.tools`). El APK se genera en `artifacts/MiCantolagua-1.0.5.apk`, junto con su SHA-256. La compilación verifica la firma del APK. Es una compilación de distribución, sin `debuggable` y con componentes internos no exportados.
 
 La firma se conserva fuera del repositorio en `/workspace/.cantolagua-android-signing`, o en `CANTOLAGUA_SIGNING_DIR`. **Guarda una copia privada de esta carpeta para firmar futuras actualizaciones**. No la subas al repositorio. Una instalación nueva que genere otra firma no podrá actualizar el APK instalado; habrá que desinstalar antes, perdiendo los datos locales.
 
@@ -69,6 +69,8 @@ La firma se conserva fuera del repositorio en `/workspace/.cantolagua-android-si
 `bash scripts/test.sh` ejecuta las pruebas de fechas, cambio de hora, repetición semanal, excepciones, parsing del calendario, protección de enlaces, confirmación de reservas y conservación del horario por día y hora. Usa transporte simulado: no envía reservas reales.
 
 `bash scripts/build_device_tests.sh` construye una APK de instrumentación separada. **Se ejecuta exclusivamente en un emulador limpio: borra los datos locales de la aplicación de destino**. Las pruebas deterministas comprueban Keystore, persistencia, exclusión de duplicados, alarmas y selectores de cada día sin realizar conexiones. La prueba opcional `NetworkDeviceChecks` consulta la web pública real y verifica la carga automática desde una instalación sin cuenta; no inicia sesión ni envía reservas. No se distribuye con la aplicación. Ver `VALIDACION.md` para el resultado de esta entrega.
+
+**Reservas → Funcionamiento en segundo plano** muestra la alarma programada, la última alarma recibida y el último paso del servicio. «Última activación» identifica el inicio del servicio. **Actualizar resultados** relee el historial local. Si una alarma estaba programada y no se recibió, revisa **Ajustes → Preparar este móvil**, permite alarmas y recordatorios y configura la batería sin restricciones. El diagnóstico permite distinguir un bloqueo de Android de un error al iniciar sesión o enviar la reserva.
 
 El diagnóstico opcional `tests/LiveReadOnly.java` permite verificar acceso y calendario desde una terminal privada. Lee las credenciales de forma interactiva, no acepta contraseñas en argumentos ni envía reservas. No guardar credenciales en código, comandos, logs ni archivos de configuración.
 
@@ -86,3 +88,13 @@ La web devuelve una vista móvil de un solo día cuando el identificador HTTP co
 ### Importes del calendario (1.0.3)
 
 La app interpreta también importes con moneda y espacios, como `0,00 €`, `0.00 EUR` y espacios no separables. Las versiones anteriores los trataban erróneamente como importes positivos. Un cero permite la reserva directa si se cumplen las demás condiciones. Un importe positivo o una inscripción marcada como pendiente de pago detiene la automatización; una inscripción pendiente de pago no se considera confirmada. Un formato desconocido se registra expresamente para comprobarlo en la web. Esta corrección reproduce un fallo del parser; no identifica por sí sola el importe que devolvió la cuenta en un intento anterior.
+
+### Recuperación y clases incluidas en el abono (1.0.5)
+
+Cantolagua utiliza `Incluida en Abono Actividades` como texto de importe para el socio. Se reconoce ese texto concreto como incluido, además de los ceros con moneda; otros textos desconocidos siguen bloqueándose sin afirmar que exista una deuda. El diálogo de la web genera el botón «Reservar plaza» con el mismo enlace `r.aspx?a=d&R=…` de la clase. El cliente añade la persona seleccionada y los parámetros JSON usados por la web; no hay una llamada de reserva adicional para abrir ese diálogo.
+
+Después del envío se consulta el calendario autenticado para comprobar la inscripción, también si se perdió la respuesta. Una respuesta incierta nunca causa otro envío automático. La app mantiene las sesiones seleccionadas que no hayan empezado aunque su apertura fuera hace horas; al activarse o volver a programar una alarma puede recuperarlas. Un intento anterior registrado sigue bloqueado hasta que el usuario revise la web y permita otro intento. La clase completa no se convierte automáticamente en una inscripción en lista de espera.
+
+`BookingFlowTests` verifica el flujo de cliente con un servidor simulado. La instrumentación **BookingFlowChecks** ejecuta la alarma, el servicio de producción, el almacenamiento y las notificaciones, sustituyendo únicamente el transporte HTTP por respuestas controladas. No envía reservas al centro.
+
+El diagnóstico `bash scripts/live_booking.sh YYYY-MM-DD HH:mm actividad` usa el mismo cliente contra la web real y, sin opciones, solo consulta. Las credenciales se leen de `CANTOLAGUA_USERNAME` y `CANTOLAGUA_PASSWORD`, nunca de argumentos. `--reserve` permite un envío real para esa sesión. `--waitlist` permite inscribirla en espera si está completa y la web ofrece esa acción; si hay plaza, permite la reserva directa. Estas opciones solo se usan para una acción solicitada por el titular. Antes del envío guarda un marcador privado fuera del repositorio para impedir repetir automáticamente una petición incierta. Siempre comprueba la cuenta y el estado actual; si ya está inscrita o en espera, no reenvía. La confianza del proxy del entorno se configura exclusivamente para este diagnóstico, sin cambiar el APK ni deshabilitar HTTPS.

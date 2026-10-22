@@ -75,7 +75,8 @@ public final class CoreTests {
             .get(0)
             .open,
         "payment blocks automation");
-    for (String amount : Arrays.asList("0,00 €", "0.00 EUR", "0\u00a0€", "0,00\u202f€")) {
+    for (String amount : Arrays.asList("0,00 €", "0.00 EUR", "0\u00a0€", "0,00\u202f€",
+        "Incluida en Abono Actividades")) {
       ClubClient.Session free = ClubClient.parse(
           Jsoup.parse(html.replace("id=\"Clase_947\"", "data-importe=\"" + amount
               + "\" id=\"Clase_947\"")), today).get(0);
@@ -159,8 +160,8 @@ public final class CoreTests {
         Plan.jobs(Instant.parse("2026-10-16T18:31:31Z"), 4, template, Collections.emptyMap())
             .get(0)
             .date
-            .equals(LocalDate.of(2026, 10, 27)),
-        "missed opening not booked late");
+            .equals(LocalDate.of(2026, 10, 20)),
+        "missed opening stays eligible while the session has not started");
     check(
         Plan.jobs(now, 4, Arrays.asList(slot, slot), Collections.emptyMap()).size() == jobs.size(),
         "duplicate selected slots deduplicated");
@@ -237,10 +238,20 @@ public final class CoreTests {
         "different session hours have different release times");
     check(Plan.retryAllowed(late.key(), 4, late.release.plusSeconds(89)),
         "reviewed retry allowed before the original deadline");
-    check(!Plan.retryAllowed(late.key(), 4, late.release.plusSeconds(90)),
-        "reviewed retry rejected at the deadline");
-    check(!Plan.retryAllowed(late.key(), 4, late.release.plusSeconds(600)),
-        "reviewed retry never revives a missed opening");
+    check(Plan.retryAllowed(late.key(), 4, late.release.plusSeconds(90)),
+        "reviewed retry remains possible after the old deadline");
+    check(Plan.retryAllowed(late.key(), 4, late.release.plusSeconds(600)),
+        "reviewed retry can recover an opened session with a place");
+    check(!Plan.retryAllowed(late.key(), 4,
+        late.date.atTime(LocalTime.parse(late.slot.time)).atZone(Plan.ZONE).toInstant()),
+        "reviewed retry rejected when the class has started");
+    Plan.Slot pilates = new Plan.Slot(0, "7", "Pilates", "09:00");
+    List<Plan.Job> recovered = Plan.jobs(Instant.parse("2026-10-22T10:00:00Z"), 4,
+        Collections.singletonList(pilates), Collections.emptyMap());
+    check(recovered.get(0).date.equals(LocalDate.of(2026, 10, 26)),
+        "reported Monday Pilates still eligible hours after Thursday opening");
+    check(recovered.get(0).release.equals(Instant.parse("2026-10-22T07:00:00Z")),
+        "Monday after DST change opens Thursday at 09:00 Madrid, not 08:00");
     check(!Plan.retryAllowed("invalid-job", 4, now), "malformed retry key rejected");
     check(!Plan.retryAllowed(late.key(), 99, now), "invalid retry timing rejected");
     System.out.println("RESULT: " + count + " passed; 0 failed. No live bookings sent.");

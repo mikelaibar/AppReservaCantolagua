@@ -104,8 +104,7 @@ public final class Plan {
       LocalDate date = LocalDate.parse(parts[0]);
       LocalTime time = LocalTime.parse(parts[2]);
       Instant session = date.atTime(time).atZone(ZONE).toInstant();
-      Instant release = date.minusDays(lead).atTime(time).atZone(ZONE).toInstant();
-      return session.isAfter(now) && now.isBefore(release.plusSeconds(90));
+      return session.isAfter(now);
     } catch (RuntimeException e) {
       return false;
     }
@@ -133,7 +132,6 @@ public final class Plan {
         if (s.day == d.getDayOfWeek().getValue() - 1) {
           Job j = new Job(s, d, lead);
           if (d.atTime(LocalTime.parse(s.time)).atZone(ZONE).toInstant().isAfter(now)
-              && !j.release.isBefore(now.minusSeconds(90))
               && seen.add(j.key())) out.add(j);
         }
     }

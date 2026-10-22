@@ -83,7 +83,7 @@ public final class DeviceChecks extends Instrumentation {
       check(!s.claim(account, retry, "950"), "retry cannot submit the same claim twice");
       s.finish(account, retry, "Reservada", "Synthetic confirmation");
       check(!s.retryAfterReview(retry.key()), "confirmed reservation cannot be reopened");
-      Plan.Job expired = new Plan.Job(slot, LocalDate.now(Plan.ZONE).plusDays(3), 4);
+      Plan.Job expired = new Plan.Job(slot, LocalDate.now(Plan.ZONE).minusDays(1), 4);
       check(s.claim(account, expired, null), "synthetic expired attempt recorded");
       s.finish(account, expired, "Requiere pago", "Synthetic expired result");
       check(!s.retryAfterReview(expired.key()), "review rejects a retry after the deadline");
@@ -101,8 +101,10 @@ public final class DeviceChecks extends Instrumentation {
               new Intent(getTargetContext(), AlarmReceiver.class),
               PendingIntent.FLAG_NO_CREATE | PendingIntent.FLAG_IMMUTABLE);
       check(pi != null, "scheduler creates private immutable alarm intent");
+      check(s.scheduled() > System.currentTimeMillis(), "scheduled activation time is persisted for phone diagnostics");
       s.enabled(false);
       Scheduler.refresh(getTargetContext());
+      check(s.scheduled() == 0, "pausing clears the scheduled activation diagnostic");
       s.erase();
       s.enabled(true);
       long before = System.currentTimeMillis();
@@ -148,8 +150,8 @@ public final class DeviceChecks extends Instrumentation {
           find(screen.getWindow().getDecorView(), "Próximos intentos") != null,
           "history tab opens without credentials");
       check(find(screen.getWindow().getDecorView(),
-          "El margen de reintento de 90 segundos desde la apertura ya ha pasado."
-              + " Este resultado se conserva. Comprueba la plaza o la lista de espera en la web.")
+          "La sesión ya ha comenzado. Este resultado se conserva."
+              + " Comprueba tu inscripción en la web.")
           != null, "expired history explains why another attempt cannot run");
       check(find(screen.getWindow().getDecorView(),
           "He revisado la web: permitir otro intento") == null,

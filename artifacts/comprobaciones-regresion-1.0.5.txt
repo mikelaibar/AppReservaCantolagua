@@ -1,0 +1,16 @@
+EXPECTED FAILURE on Git HEAD 2506386 (old 1.0.4), with current regression test:
+PASS parse real calendar contract
+PASS exact date activity and time match
+PASS never substitutes a different activity
+PASS ambiguous room/session rejected
+PASS cancel URL never booked
+PASS full class never booked
+PASS future class never booked
+PASS payment blocks automation
+PASS formatted zero is free: 0,00 €
+PASS formatted zero is free: 0.00 EUR
+PASS formatted zero is free: 0 €
+PASS formatted zero is free: 0,00 €
+Exception in thread "main" java.lang.AssertionError: formatted zero is free: Incluida en Abono Actividades
+	at es.cantolagua.misemana.CoreTests.check(CoreTests.java:13)
+	at es.cantolagua.misemana.CoreTests.main(CoreTests.java:83)

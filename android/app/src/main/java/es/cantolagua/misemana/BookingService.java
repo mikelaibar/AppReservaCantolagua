@@ -10,6 +10,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 
 public final class BookingService extends Service {
   private static final AtomicBoolean RUNNING = new AtomicBoolean();
+  // In-process dependency seam for signed instrumentation; never exposed via intents.
+  static java.util.function.Supplier<ClubClient> clients = ClubClient::new;
   private volatile boolean stopped;
 
   public IBinder onBind(Intent i) {
@@ -17,7 +19,9 @@ public final class BookingService extends Service {
   }
 
   public int onStartCommand(Intent intent, int flags, int startId) {
-    new Store(this).woke();
+    Store started = new Store(this);
+    started.woke();
+    started.stage("Servicio de reservas iniciado");
     Notification n =
         Notices.notification(
             this,
@@ -51,8 +55,10 @@ public final class BookingService extends Service {
       Instant release = pending.get(0).release;
       if (release.isAfter(Instant.now().plusSeconds(70))) return;
       for (Plan.Job j : pending) if (j.release.equals(release)) batch.add(j);
-      ClubClient client = new ClubClient();
+      ClubClient client = clients.get();
+      store.stage("Iniciando sesión en Cantolagua");
       client.login(store.user(), store.password());
+      store.stage("Cuenta autenticada; esperando o consultando la apertura");
       long wall = System.currentTimeMillis(), elapsed = SystemClock.elapsedRealtime();
       while (Instant.now().isBefore(release)) {
         if (!active(store, revision) || SystemClock.elapsedRealtime() - start > 150000) return;
@@ -63,13 +69,16 @@ public final class BookingService extends Service {
         Thread.sleep(
             Math.min(250, Math.max(1, release.toEpochMilli() - System.currentTimeMillis())));
       }
+      // Give a late wake-up its own bounded query window instead of dropping the job.
+      Instant queryDeadline = Instant.now().plusSeconds(90);
       List<Plan.Job> remaining = new ArrayList<>(batch);
       while (active(store, revision)
           && !remaining.isEmpty()
           && SystemClock.elapsedRealtime() - start < 150000
-          && Instant.now().isBefore(release.plusSeconds(90))) {
+          && Instant.now().isBefore(queryDeadline)) {
         List<ClubClient.Session> catalogue;
         try {
+          store.stage("Consultando disponibilidad con la cuenta autenticada");
           catalogue = client.catalogue();
           store.catalogue(catalogue);
         } catch (Exception e) {
@@ -79,6 +88,13 @@ public final class BookingService extends Service {
         Iterator<Plan.Job> iterator = remaining.iterator();
         while (iterator.hasNext()) {
           Plan.Job job = iterator.next();
+          if (!job.date.atTime(LocalTime.parse(job.slot.time)).atZone(Plan.ZONE)
+              .toInstant().isAfter(Instant.now())) {
+            if (store.claim(account, job, null))
+              store.finish(account, job, "No reservada", "La sesión ya ha comenzado");
+            iterator.remove();
+            continue;
+          }
           if (!active(store, revision) || !store.desired(job) || store.attempted(job.key())) {
             iterator.remove();
             continue;
@@ -106,6 +122,7 @@ public final class BookingService extends Service {
                     session.status,
                     session.detail);
                 Notices.result(this, session.status, job.label());
+                store.stage("Resultado: " + session.status);
               }
               iterator.remove();
             }
@@ -114,7 +131,7 @@ public final class BookingService extends Service {
           synchronized (Store.LOCK) {
             if (!active(store, revision)
                 || !store.desired(job)
-                || !Instant.now().isBefore(release.plusSeconds(90))
+                || !Instant.now().isBefore(queryDeadline)
                 || SystemClock.elapsedRealtime() - start > 150000
                 || Math.abs(
                         (System.currentTimeMillis() - clockStart)
@@ -127,24 +144,18 @@ public final class BookingService extends Service {
           }
           iterator.remove();
           try {
-            boolean confirmed = client.reserve(session);
-            if (!confirmed) {
-              try {
-                ClubClient.Session check = ClubClient.match(client.catalogue(), job);
-                confirmed = check != null && check.booked;
-              } catch (Exception ignored) {
-              }
-            }
+            store.stage("Enviando y comprobando la reserva");
+            ClubClient.Outcome outcome = client.reserveVerified(session, job);
             store.finish(
                 account,
                 job,
-                confirmed ? "Reservada" : "Comprobar en la web",
-                confirmed
-                    ? "Cantolagua ha confirmado tu plaza"
-                    : "La respuesta no confirma la plaza. Revisa la web antes de repetir");
+                outcome.confirmed ? "Reservada" : "Comprobar en la web",
+                outcome.detail);
             Notices.result(
-                this, confirmed ? "¡Plaza reservada!" : "Comprueba tu reserva", job.label());
+                this, outcome.confirmed ? "¡Plaza reservada!" : "Comprueba tu reserva", job.label());
+            store.stage(outcome.confirmed ? "Reserva confirmada" : "Resultado incierto: revisar la web");
           } catch (Exception e) {
+            store.stage("Resultado incierto: revisar la web");
             store.finish(
                 account,
                 job,
@@ -165,10 +176,11 @@ public final class BookingService extends Service {
               account,
               job,
               "No reservada",
-              "No se encontró una plaza disponible en el margen de apertura. Comprueba el horario y"
+              "No se encontró una plaza disponible durante la consulta. Comprueba el horario y"
                   + " los días de antelación");
 
     } catch (Exception e) {
+      store.stage("No se pudo preparar la conexión o iniciar sesión");
       for (Plan.Job job : batch)
         if (!store.attempted(job.key()) && store.claim(account, job, null))
           store.finish(

@@ -18,7 +18,7 @@ public final class ClubClient {
       PAGE = BASE + "/reservas/actividades.aspx";
   private final CookieManager cookies =
       new CookieManager(null, CookiePolicy.ACCEPT_ORIGINAL_SERVER);
-  static final String USER_AGENT = "MiCantolagua/1.0.4";
+  static final String USER_AGENT = "MiCantolagua/1.0.5";
   private final Transport transport;
   private final LocalDate testDate;
 
@@ -326,6 +326,8 @@ public final class ClubClient {
   private static int priceState(String raw) {
     String amount = raw.replace('\u00a0', ' ').replace('\u202f', ' ').trim();
     if (amount.isEmpty()) return 0;
+    String label = amount.replaceAll("\\s+", " ").toLowerCase(Locale.ROOT);
+    if (label.equals("incluida en abono actividades")) return 0;
     amount = amount.replaceFirst("^(?:€|EUR)\\s*", "")
         .replaceFirst("\\s*(?:€|EUR)$", "").trim();
     if (!amount.matches("[0-9]+(?:[.,][0-9]{1,2})?")) return -1;
@@ -384,8 +386,14 @@ public final class ClubClient {
   public boolean reserve(Session s) throws Exception {
     if (!s.open || s.paid || !direct(s))
       throw new Problem("Esta sesión no admite una reserva directa");
+    return created(new JSONObject(perform(s, "d")), s.id);
+  }
+
+  private String perform(Session s, String action) throws Exception {
     URI u = safe(s.href, true);
     Map<String, String> q = query(u);
+    if (!action.equals(q.get("a")) || !s.id.equals(q.get("R")))
+      throw new Problem("La acción no coincide con la sesión seleccionada");
     if (!s.person.isEmpty()) {
       if (q.containsKey("IdInscrito") && !s.person.equals(q.get("IdInscrito")))
         throw new Problem("Persona de reserva inesperada");
@@ -397,6 +405,67 @@ public final class ClubClient {
     StringBuilder url = new StringBuilder(BASE + u.getPath() + "?");
     for (Map.Entry<String, String> f : q.entrySet())
       url.append(encode(f.getKey())).append('=').append(encode(f.getValue())).append('&');
-    return created(new JSONObject(request(url.toString(), null, true)), s.id);
+    return request(url.toString(), null, true);
+  }
+
+  public static final class Outcome {
+    public final boolean confirmed;
+    public final boolean waitlisted;
+    public final String detail;
+
+    Outcome(boolean confirmed, String detail) {
+      this(confirmed, detail, false);
+    }
+
+    Outcome(boolean confirmed, String detail, boolean waitlisted) {
+      this.confirmed = confirmed;
+      this.detail = detail;
+      this.waitlisted = waitlisted;
+    }
+  }
+
+  public Outcome reserveVerified(Session session, Plan.Job job) throws Exception {
+    if (match(Collections.singletonList(session), job) != session)
+      throw new Problem("La sesión no coincide con la actividad, fecha y hora solicitadas");
+    boolean receipt = false;
+    try {
+      receipt = reserve(session);
+    } catch (Exception ignored) {
+      // A timeout may happen after the server has accepted the request: read, never resend.
+    }
+    try {
+      Session current = match(catalogue(), job);
+      if (current != null && current.booked)
+        return new Outcome(true, "Cantolagua confirma tu inscripción en una consulta posterior");
+      if (current != null && current.paid)
+        return new Outcome(false, current.detail + ". Comprueba la reserva en la web");
+    } catch (Exception ignored) {
+      if (receipt)
+        return new Outcome(true, "Cantolagua ha confirmado la sesión en el justificante de reserva");
+    }
+    // A contradictory calendar is not overridden by a generic success response.
+    return new Outcome(false, "No se ha podido verificar tu inscripción. Revisa la web antes"
+        + " de repetir; no se enviará automáticamente otra solicitud");
+  }
+
+  /** Explicit opt-in operation; the automatic booking service never calls this method. */
+  public Outcome joinWaitlistVerified(Session session, Plan.Job job) throws Exception {
+    if (match(Collections.singletonList(session), job) != session)
+      throw new Problem("La sesión no coincide con la lista de espera solicitada");
+    if (session.waitlisted) return new Outcome(true, "Ya estás en la lista de espera", true);
+    Map<String, String> q = query(safe(session.href, true));
+    if (session.paid || !"apuntarlistaesperaclase".equals(q.get("a"))
+        || !session.id.equals(q.get("R")))
+      throw new Problem("La sesión no ofrece esta inscripción en lista de espera");
+    try { perform(session, "apuntarlistaesperaclase"); }
+    catch (Exception ignored) { /* Read after uncertainty, never resend. */ }
+    try {
+      Session current = match(catalogue(), job);
+      if (current != null && current.waitlisted)
+        return new Outcome(true, "Cantolagua confirma tu inscripción en la lista de espera", true);
+      if (current != null && current.booked)
+        return new Outcome(true, "Cantolagua confirma que ya tienes una plaza");
+    } catch (Exception ignored) { }
+    return new Outcome(false, "No se ha confirmado la lista de espera. Comprueba la web antes de repetir");
   }
 }

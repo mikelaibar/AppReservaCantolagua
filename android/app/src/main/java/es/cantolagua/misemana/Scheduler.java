@@ -23,6 +23,7 @@ public final class Scheduler {
               new Intent(c, AlarmReceiver.class),
               PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
       am.cancel(pi);
+      s.scheduled(0);
       if (!s.enabled()) return;
       if (!allowed(c)) {
         s.enabled(false);
@@ -38,8 +39,10 @@ public final class Scheduler {
       long when = Math.max(System.currentTimeMillis() + 1500, next.release.toEpochMilli() - 60000);
       try {
         am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, when, pi);
-        s.status(
-            "Próximo intento: "
+        s.scheduled(when);
+        s.status(next.release.isBefore(Instant.now())
+            ? "Recuperando una clase ya abierta: " + next.label()
+            : "Próximo intento: "
                 + next.release
                     .atZone(Plan.ZONE)
                     .format(java.time.format.DateTimeFormatter.ofPattern("dd/MM 'a las' HH:mm"))

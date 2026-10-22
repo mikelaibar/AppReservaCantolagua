@@ -1,0 +1,15 @@
+PASS late Pilates job remains pending after the old 90-second cutoff
+PASS scheduler's exact alarm starts the actual background service
+PASS alarm delivery is recorded separately from service activation
+PASS background service logs in with stored credentials
+PASS included membership class sends the reserve-place action once
+PASS service verifies inscription in a separate authenticated calendar
+PASS verified result persisted in history
+PASS confirmed class cannot be scheduled a second time
+PASS confirmed booking posts the success notification
+PASS lost response causes a verification read and no resend
+PASS uncertain mutation stays blocked from automatic catch-up
+PASS service recovers an accepted booking after the response is lost
+PASS failed login records an error without sending a reservation
+RESULT: 13 Android booking flow checks passed; simulated HTTP, no live reservations.
+

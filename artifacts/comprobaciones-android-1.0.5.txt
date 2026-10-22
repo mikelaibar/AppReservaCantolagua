@@ -1,0 +1,36 @@
+PASS confirmed four-day rule is the installation default
+PASS Keystore encrypted credential round trip
+PASS new credentials pause automation
+PASS credentials survive store reopening
+PASS weekly template saved
+PASS one-week override preserves future template
+PASS reset week restores template
+PASS durable claim created before mutation
+PASS duplicate job claim blocked
+PASS duplicate canonical session claim blocked
+PASS interrupted mutation remains uncertain
+PASS confirmed outcome persisted
+PASS synthetic failed attempt recorded
+PASS review permits retry before its deadline
+PASS reviewed retry remains visible in history
+PASS reviewed retry becomes eligible for the scheduler
+PASS pending retry survives reopening the database
+PASS retry reclaims the existing history row
+PASS retry cannot submit the same claim twice
+PASS confirmed reservation cannot be reopened
+PASS synthetic expired attempt recorded
+PASS review rejects a retry after the deadline
+PASS expired review preserves the original result and duplicate protection
+PASS exact alarm permission granted for test
+PASS scheduler creates private immutable alarm intent
+PASS scheduled activation time is persisted for phone diagnostics
+PASS pausing clears the scheduled activation diagnostic
+PASS exact alarm starts foreground service while app UI is closed
+PASS release activity launches on Android 15
+PASS settings display confirmed booking rule
+PASS history tab opens without credentials
+PASS expired history explains why another attempt cannot run
+PASS expired result does not offer the destructive old retry action
+PASS weekly plan tab opens
+RESULT: 34 device checks passed; no live requests sent.
+

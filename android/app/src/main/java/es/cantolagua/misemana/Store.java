@@ -45,6 +45,15 @@ public final class Store extends SQLiteOpenHelper {
     return prefs.getLong("last_wake", 0);
   }
 
+  public void scheduled(long when) { save(prefs.edit().putLong("scheduled_alarm", when)); }
+  public long scheduled() { return prefs.getLong("scheduled_alarm", 0); }
+  public void alarmFired() { save(prefs.edit().putLong("last_alarm", System.currentTimeMillis())); }
+  public long lastAlarm() { return prefs.getLong("last_alarm", 0); }
+  public void stage(String value) {
+    if (!value.equals(stage())) save(prefs.edit().putString("booking_stage", value));
+  }
+  public String stage() { return prefs.getString("booking_stage", "Sin proceso de reserva registrado"); }
+
   public boolean enabled() {
     return prefs.getBoolean("enabled", false);
   }
@@ -313,7 +322,7 @@ public final class Store extends SQLiteOpenHelper {
       ContentValues v = new ContentValues();
       v.put("state", RETRY_READY);
       v.put("detail", "Has autorizado otro intento tras revisar la web. Aún no se ha enviado"
-          + " otra solicitud; necesita las reservas activadas y el margen de apertura vigente");
+          + " otra solicitud; necesita las reservas activadas y que la sesión no haya empezado");
       v.put("stamp", System.currentTimeMillis());
       return getWritableDatabase().update("attempts", v,
           "account=? AND job=? AND state NOT IN (?,?)",

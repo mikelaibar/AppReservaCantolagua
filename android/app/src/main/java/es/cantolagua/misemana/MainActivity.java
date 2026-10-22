@@ -207,6 +207,14 @@ public final class MainActivity extends Activity {
             GREEN,
             true));
     status.addView(text(store.status(), 15, MUTED, false));
+    status.addView(text("También se comprueban las clases seleccionadas cuya apertura ya pasó,"
+        + " mientras no hayan empezado. Los envíos inciertos requieren revisar la web.",
+        14, MUTED, false));
+    if (Build.VERSION.SDK_INT >= 28
+        && getSystemService(ActivityManager.class).isBackgroundRestricted())
+      status.addView(text("Android restringe esta aplicación en segundo plano. En Ajustes,"
+          + " revisa la batería y selecciona Sin restricciones para permitir las reservas.",
+          15, 0xff9b5722, true));
     Switch enabled = new Switch(this);
     enabled.setText("Reservar por mí");
     enabled.setTextSize(18);
@@ -575,7 +583,9 @@ public final class MainActivity extends Activity {
       c.addView(text(j.label(), 18, INK, true));
       c.addView(
           text(
-              (store.enabled() ? "Programada: " : "En pausa: ")
+              (store.enabled()
+                  ? (j.release.isBefore(Instant.now()) ? "Abierta · recuperar desde: " : "Programada: ")
+                  : "En pausa: ")
                   + j.release
                       .atZone(Plan.ZONE)
                       .format(DateTimeFormatter.ofPattern("dd/MM 'a las' HH:mm"))
@@ -594,6 +604,17 @@ public final class MainActivity extends Activity {
               14,
               MUTED,
               false));
+    LinearLayout diagnostic = card();
+    diagnostic.addView(text("Funcionamiento en segundo plano", 19, INK, true));
+    diagnostic.addView(text(store.scheduled() > 0
+        ? "Alarma programada para: " + diagnosticTime(store.scheduled())
+        : "Sin alarma programada: comprueba si las reservas están activadas", 14, MUTED, false));
+    diagnostic.addView(text(store.lastAlarm() > 0
+        ? "Última alarma recibida: " + diagnosticTime(store.lastAlarm())
+        : "Todavía no se ha recibido ninguna alarma en esta instalación", 14, MUTED, false));
+    diagnostic.addView(text("Último paso: " + store.stage(), 14, MUTED, false));
+    diagnostic.addView(button("Revisar permisos y batería", () -> { tab = 2; render(); }, false));
+    content.addView(button("Actualizar resultados", this::render, false));
     content.addView(text("Resultados", 23, INK, true));
     List<String[]> history = store.history();
     if (history.isEmpty()) {
@@ -622,8 +643,8 @@ public final class MainActivity extends Activity {
       c.addView(button("Ver en Cantolagua", this::website, false));
       if (!h[2].equals("Reservada") && !h[2].equals("Ya reservada")) {
         if (!Plan.retryAllowed(h[0], store.lead(), Instant.now())) {
-          c.addView(text("El margen de reintento de 90 segundos desde la apertura ya ha pasado."
-              + " Este resultado se conserva. Comprueba la plaza o la lista de espera en la web.",
+          c.addView(text("La sesión ya ha comenzado. Este resultado se conserva."
+              + " Comprueba tu inscripción en la web.",
               15, MUTED, false));
         } else c.addView(
             button(
@@ -632,7 +653,7 @@ public final class MainActivity extends Activity {
                     confirm(
                         "Evitar duplicados",
                         "Confirma que has revisado la web y NO tienes esta reserva. Se permitirá"
-                            + " otro intento dentro del margen de apertura si las reservas están"
+                            + " otro intento mientras la sesión no haya empezado si las reservas están"
                             + " activadas. El resultado seguirá visible mientras se prepara.",
                         () -> {
                           if (!store.retryAfterReview(h[0]))
@@ -664,6 +685,16 @@ public final class MainActivity extends Activity {
             : InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
     e.setImportantForAutofill(View.IMPORTANT_FOR_AUTOFILL_NO);
     return e;
+  }
+
+  private String diagnosticTime(long stamp) {
+    return Instant.ofEpochMilli(stamp).atZone(Plan.ZONE)
+        .format(DateTimeFormatter.ofPattern("dd/MM HH:mm:ss '· Madrid'"));
+  }
+
+  private String appVersion() {
+    try { return getPackageManager().getPackageInfo(getPackageName(), 0).versionName; }
+    catch (PackageManager.NameNotFoundException e) { return ""; }
   }
 
   private void showSettings() {
@@ -834,7 +865,7 @@ public final class MainActivity extends Activity {
             MUTED,
             false));
     LinearLayout help = card();
-    help.addView(text("Mi Cantolagua · 1.0.2", 18, INK, true));
+    help.addView(text("Mi Cantolagua · " + appVersion(), 18, INK, true));
     help.addView(
         text(
             "Aplicación independiente. No garantiza plaza si la clase se llena. La solicitud se"
